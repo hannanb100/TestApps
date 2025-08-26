@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Financial Advisor Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>💰 Financial Advisor Assistant</h1>
+        <p>Get personalized financial advice to secure your future</p>
+    </div>
+
+    <!-- Flash messages: show validation errors when fields are empty -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-warning">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Financial goal form posts to /results -->
+    <div class="card">
+        <form method="post" action="{{ url_for('results') }}" id="financialForm">
+            <div class="form-grid">
+                <!-- Left Column -->
+                <div>
+                    <div class="form-group">
+                        <label for="financial_goal">What is your financial goal?</label>
+                        <select id="financial_goal" name="financial_goal" class="form-control" required>
+                            <option value="">Select your primary financial goal...</option>
+                            <option value="Buy a house">🏠 Buy a house</option>
+                            <option value="Retire early">⏰ Retire early</option>
+                            <option value="Build emergency fund">🛡️ Build emergency fund</option>
+                            <option value="Save for education">🎓 Save for education</option>
+                            <option value="Start a business">💼 Start a business</option>
+                            <option value="Travel and experiences">✈️ Travel and experiences</option>
+                            <option value="Pay off debt">💳 Pay off debt</option>
+                            <option value="Invest for wealth building">📈 Invest for wealth building</option>
+                            <option value="Other">💭 Other (specify below)</option>
+                        </select>
+                        <textarea id="financial_goal_custom" name="financial_goal_custom" class="form-control" rows="2" placeholder="If you selected 'Other', please describe your specific financial goal here..." style="margin-top: 0.5rem; display: none;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timeframe">What is your target timeframe to achieve this goal?</label>
+                        <select id="timeframe" name="timeframe" class="form-control" required>
+                            <option value="">Select your timeframe...</option>
+                            <option value="1">1 year</option>
+                            <option value="2">2 years</option>
+                            <option value="3">3 years</option>
+                            <option value="5">5 years</option>
+                            <option value="7">7 years</option>
+                            <option value="10">10 years</option>
+                            <option value="15">15 years</option>
+                            <option value="20">20 years</option>
+                            <option value="25">25 years</option>
+                            <option value="30">30 years</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="current_savings">What is your current savings?</label>
+                        <select id="current_savings" name="current_savings" class="form-control" required>
+                            <option value="">Select your current savings...</option>
+                            <option value="0">$0 - Starting from scratch</option>
+                            <option value="1000">$1,000 - Emergency fund starter</option>
+                            <option value="5000">$5,000 - Basic emergency fund</option>
+                            <option value="10000">$10,000 - Solid emergency fund</option>
+                            <option value="25000">$25,000 - Good savings base</option>
+                            <option value="50000">$50,000 - Strong financial foundation</option>
+                            <option value="100000">$100,000 - Excellent savings</option>
+                            <option value="250000">$250,000+ - Wealth building</option>
+                            <option value="custom">Custom amount (enter below)</option>
+                        </select>
+                        <input id="current_savings_custom" name="current_savings_custom" type="number" class="form-control" step="0.01" min="0" placeholder="Enter custom amount (e.g., 15000 for $15,000)" style="margin-top: 0.5rem; display: none;" />
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div>
+                    <div class="form-group">
+                        <label for="monthly_income">What is your monthly income?</label>
+                        <select id="monthly_income" name="monthly_income" class="form-control" required>
+                            <option value="">Select your monthly income...</option>
+                            <option value="2000">$2,000 - Part-time/Entry level</option>
+                            <option value="3500">$3,500 - Early career</option>
+                            <option value="5000">$5,000 - Mid-career</option>
+                            <option value="7500">$7,500 - Established professional</option>
+                            <option value="10000">$10,000 - Senior professional</option>
+                            <option value="15000">$15,000 - Executive level</option>
+                            <option value="25000">$25,000+ - High earner</option>
+                            <option value="custom">Custom amount (enter below)</option>
+                        </select>
+                        <input id="monthly_income_custom" name="monthly_income_custom" type="number" class="form-control" step="0.01" min="0" placeholder="Enter custom amount (e.g., 5000 for $5,000/month)" style="margin-top: 0.5rem; display: none;" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="monthly_expenses">What are your monthly expenses?</label>
+                        <select id="monthly_expenses" name="monthly_expenses" class="form-control" required>
+                            <option value="">Select your monthly expenses...</option>
+                            <option value="1500">$1,500 - Minimal lifestyle</option>
+                            <option value="2500">$2,500 - Budget conscious</option>
+                            <option value="4000">$4,000 - Comfortable living</option>
+                            <option value="6000">$6,000 - Good lifestyle</option>
+                            <option value="8000">$8,000 - Premium lifestyle</option>
+                            <option value="12000">$12,000+ - Luxury lifestyle</option>
+                            <option value="custom">Custom amount (enter below)</option>
+                        </select>
+                        <input id="monthly_expenses_custom" name="monthly_expenses_custom" type="number" class="form-control" step="0.01" min="0" placeholder="Enter custom amount (e.g., 3000 for $3,000/month)" style="margin-top: 0.5rem; display: none;" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="risk_tolerance">What is your risk tolerance?</label>
+                        <select id="risk_tolerance" name="risk_tolerance" class="form-control" required>
+                            <option value="">Select your risk tolerance...</option>
+                            <option value="Low">🛡️ Conservative - Preserve capital, stable returns</option>
+                            <option value="Medium">⚖️ Balanced - Moderate growth with some risk</option>
+                            <option value="High">🚀 Aggressive - Maximize returns, accept volatility</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit button -->
+            <div style="text-align: center; margin-top: 2rem;">
+                <button class="btn btn-primary" type="submit">Get Financial Advice</button>
+            </div>
+        </form>
+    </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
