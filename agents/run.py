@@ -6,6 +6,11 @@ Startup script for the Agentic Chatbot
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from parent directory (APPS root)
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=env_path)
 
 def check_environment():
     """Check if required environment variables are set"""
