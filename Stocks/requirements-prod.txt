@@ -1,0 +1,36 @@
+# Production Dependencies for Railway Deployment
+# =============================================
+
+# Core Web Framework
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+
+# HTTP Client
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# Data Processing
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Stock Data
+yfinance>=0.2.18
+
+# SMS/Communication (legacy, not used in production)
+twilio>=8.10.0
+
+# AI/ML
+langchain>=0.1.0
+openai>=1.3.0
+
+# Scheduling
+apscheduler>=3.10.4
+
+# Database
+sqlalchemy>=2.0.23
+
+# Environment Management
+python-dotenv>=1.0.0
+
+# Logging
+structlog>=23.2.0
