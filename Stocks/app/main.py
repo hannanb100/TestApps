@@ -211,6 +211,22 @@ app.include_router(webhooks_router)
 app.include_router(api_router)
 app.include_router(health_router)
 
+# Import and include alert history router
+from .routes.alert_history import router as alert_history_router
+app.include_router(alert_history_router)
+
+# Import and include dashboard router
+from .routes.dashboard import router as dashboard_router
+app.include_router(dashboard_router)
+
+# Import and include stock list router
+from .routes.stock_list import router as stock_list_router
+app.include_router(stock_list_router)
+
+# Import and include alert preferences router
+from .routes.alert_preferences import router as alert_preferences_router
+app.include_router(alert_preferences_router)
+
 
 # Simple health check endpoint for Railway
 @app.get("/health")
@@ -310,8 +326,24 @@ async def stock_price_check_task():
         # 4. Generate alerts for significant changes
         # 5. Send SMS alerts with AI analysis
         
-        # Hardcoded stocks for perosnal use off app, in reality it also accepts sms inputs
-        tracked_stocks = ["VOO", "QQQM", "SCHD", "VT","SPLG","SPY", "JEPI", "MSTY", "ARKK", "WDAY"]
+        # Get dynamic list of tracked stocks from the stock list service
+        from .services.stock_list_service import StockListService
+        from .services.alert_preferences_service import AlertPreferencesService
+        
+        stock_list_service = StockListService()
+        preferences_service = AlertPreferencesService()
+        
+        tracked_stocks = stock_list_service.get_active_stocks()
+        
+        if not tracked_stocks:
+            logger.warning("No active stocks found in tracking list")
+            return
+        
+        # Get alert preferences
+        preferences = preferences_service.get_preferences()
+        if not preferences or not preferences.is_active:
+            logger.warning("Alert preferences not active, skipping price checks")
+            return
         
         for symbol in tracked_stocks:
             try:
@@ -320,26 +352,41 @@ async def stock_price_check_task():
                 if not quote:
                     continue
                 
-                # Check if alert should be triggered
-                threshold = settings.alert_threshold_percent
+                # Check if alert should be triggered using preferences
+                threshold = preferences_service.get_effective_threshold(symbol)
                 if abs(quote.change_percent) >= threshold:
+                    # Check if alert should be sent based on preferences
+                    alert_type = "DAILY"  # Could be determined based on comparison logic
+                    if not preferences_service.should_send_alert(symbol, alert_type):
+                        logger.info(f"Alert skipped for {symbol} due to preferences (cooldown, limit, etc.)")
+                        continue
+                    
                     logger.info(f"Alert triggered for {symbol}: {quote.change_percent:+.2f}%")
                     
-                    # Generate AI analysis
-                    analysis = await agent_service.analyze_stock_movement(
-                        symbol, float(quote.previous_close), float(quote.price)
-                    )
+                    # Generate AI analysis (if enabled in preferences)
+                    analysis = None
+                    if preferences.include_analysis:
+                        analysis = await agent_service.analyze_stock_movement(
+                            symbol, float(quote.previous_close), float(quote.price)
+                        )
+                    else:
+                        # Create minimal analysis if disabled
+                        analysis = type('Analysis', (), {
+                            'analysis': f"Stock {symbol} moved {quote.change_percent:+.2f}%",
+                            'key_factors': ["Price movement"]
+                        })()
                     
-                    # Send email alert
-                    await email_service.send_stock_alert(
-                        symbol=symbol,
-                        current_price=float(quote.price),
-                        previous_price=float(quote.previous_close),
-                        change_percent=float(quote.change_percent),
-                        analysis=analysis.analysis,
-                        key_factors=analysis.key_factors,
-                        alert_type="DAILY"  # Could be determined based on comparison logic
-                    )
+                    # Send email alert (if enabled in preferences)
+                    if preferences.email_alerts_enabled:
+                        await email_service.send_stock_alert(
+                            symbol=symbol,
+                            current_price=float(quote.price),
+                            previous_price=float(quote.previous_close),
+                            change_percent=float(quote.change_percent),
+                            analysis=analysis.analysis,
+                            key_factors=analysis.key_factors if preferences.include_key_factors else [],
+                            alert_type=alert_type
+                        )
                     
             except Exception as e:
                 logger.error(f"Error processing stock {symbol}: {str(e)}")

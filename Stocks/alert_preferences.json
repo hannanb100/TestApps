@@ -1,0 +1,26 @@
+{
+  "id": 1,
+  "global_alert_threshold": 3.0,
+  "alert_frequency": "MARKET_HOURS",
+  "market_hours_only": true,
+  "alert_types": [
+    "DAILY",
+    "INTRADAY"
+  ],
+  "email_alerts_enabled": true,
+  "email_rich_format": true,
+  "sms_alerts_enabled": false,
+  "include_analysis": true,
+  "include_key_factors": true,
+  "include_price_history": false,
+  "max_alerts_per_day": 10,
+  "alert_cooldown_minutes": 30,
+  "enable_volume_alerts": false,
+  "volume_threshold_multiplier": 2.0,
+  "enable_news_alerts": true,
+  "news_sentiment_threshold": 0.7,
+  "custom_schedule": null,
+  "created_date": "2025-09-03 18:16:30.125928",
+  "updated_date": "2025-09-03 18:16:30.125931",
+  "is_active": true
+}

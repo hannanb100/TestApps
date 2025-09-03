@@ -191,13 +191,41 @@ class EmailService:
             )
             
             # Send the email
-            return await self.send_email(
+            email_result = await self.send_email(
                 to_email=self.to_email,
                 subject=subject,
                 html_content=html_content,
                 text_content=text_content,
                 message_type="alert"
             )
+            
+            # Log the alert to history (regardless of email success)
+            try:
+                from ..models.alert_history import AlertHistory
+                from ..services.alert_history_service import AlertHistoryService
+                
+                # Create alert history entry
+                alert_history = AlertHistory(
+                    symbol=symbol,
+                    current_price=current_price,
+                    previous_price=previous_price,
+                    change_percent=change_percent,
+                    alert_type=alert_type,
+                    analysis=analysis,
+                    key_factors=key_factors,
+                    threshold_used=3.0,  # TODO: Get from settings
+                    email_sent=email_result is not None
+                )
+                
+                # Add to alert history
+                alert_service = AlertHistoryService()
+                alert_id = alert_service.add_alert(alert_history)
+                logger.info(f"Logged alert #{alert_id} to history for {symbol}")
+                
+            except Exception as e:
+                logger.error(f"Error logging alert to history: {str(e)}")
+            
+            return email_result
             
         except Exception as e:
             logger.error(f"Error sending stock alert email: {str(e)}")

@@ -1,0 +1,53 @@
+[
+  {
+    "id": 1,
+    "symbol": "TEST",
+    "current_price": 150.25,
+    "previous_price": 145.0,
+    "change_percent": 3.62,
+    "alert_type": "INTRADAY",
+    "analysis": "Test stock increased by 3.62% due to strong investor interest and positive market sentiment. This is a test alert to verify the integration between email service and alert history.",
+    "key_factors": [
+      "Test integration",
+      "Strong investor interest",
+      "Positive sentiment"
+    ],
+    "timestamp": "2025-09-03 17:55:23.119172",
+    "threshold_used": 3.0,
+    "email_sent": true
+  },
+  {
+    "id": 2,
+    "symbol": "TEST",
+    "current_price": 150.25,
+    "previous_price": 145.0,
+    "change_percent": 3.62,
+    "alert_type": "INTRADAY",
+    "analysis": "Test stock increased by 3.62% due to strong investor interest and positive market sentiment. This is a test alert to verify the integration between email service and alert history.",
+    "key_factors": [
+      "Test integration",
+      "Strong investor interest",
+      "Positive sentiment"
+    ],
+    "timestamp": "2025-09-03 17:55:40.892143",
+    "threshold_used": 3.0,
+    "email_sent": true
+  },
+  {
+    "id": 3,
+    "symbol": "TEST",
+    "current_price": 150.25,
+    "previous_price": 145.0,
+    "change_percent": 3.62,
+    "alert_type": "INTRADAY",
+    "analysis": "Test stock increased by 3.62% due to strong investor interest and positive market sentiment. This is a test alert to verify the integration between email service and alert history.",
+    "key_factors": [
+      "Test integration",
+      "Strong investor interest",
+      "Positive sentiment"
+    ],
+    "timestamp": "2025-09-03 17:56:38.134595",
+    "threshold_used": 3.0,
+    "email_sent": true
+  }
+]
