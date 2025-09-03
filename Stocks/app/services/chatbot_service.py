@@ -25,7 +25,7 @@ import json  # For working with JSON data
 import re  # For text pattern matching
 
 # Third-party imports
-from langchain_openai import OpenAI  # OpenAI language model
+from langchain_community.llms import OpenAI  # OpenAI language model
 from langchain.prompts import PromptTemplate  # For creating AI prompts
 from langchain.chains import LLMChain  # For chaining AI operations
 from langchain_core.output_parsers import BaseOutputParser  # For parsing AI responses
