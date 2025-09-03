@@ -89,7 +89,7 @@ class AlertPreferencesService:
         """Save preferences to the storage file."""
         try:
             if self.preferences:
-                preferences_data = self.preferences.dict()
+                preferences_data = self.preferences.model_dump()
                 
                 with open(self.storage_file, 'w') as f:
                     json.dump(preferences_data, f, indent=2, default=str)
@@ -134,10 +134,10 @@ class AlertPreferencesService:
                 enable_news_alerts=self.preferences.enable_news_alerts,
                 news_sentiment_threshold=self.preferences.news_sentiment_threshold,
                 custom_schedule=self.preferences.custom_schedule,
-                created_date=self.preferences.created_date,
-                updated_date=self.preferences.updated_date,
+                created_date=self.preferences.created_date.isoformat() if isinstance(self.preferences.created_date, datetime) else self.preferences.created_date,
+                updated_date=self.preferences.updated_date.isoformat() if isinstance(self.preferences.updated_date, datetime) else self.preferences.updated_date,
                 is_active=self.preferences.is_active,
-                next_alert_time=next_alert_time,
+                next_alert_time=next_alert_time.isoformat() if isinstance(next_alert_time, datetime) else next_alert_time,
                 alerts_sent_today=alerts_sent_today,
                 cooldown_active=cooldown_active
             )

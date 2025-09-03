@@ -125,7 +125,7 @@ class StockListService:
                     id=stock.id,
                     symbol=stock.symbol,
                     name=stock.name,
-                    added_date=stock.added_date,
+                    added_date=stock.added_date.isoformat() if isinstance(stock.added_date, datetime) else stock.added_date,
                     is_active=stock.is_active,
                     alert_threshold=stock.alert_threshold,
                     alert_type=stock.alert_type,
