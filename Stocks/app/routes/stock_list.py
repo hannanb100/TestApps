@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/v1/stocks", tags=["stock-list"])
 stock_list_service = StockListService()
 
 
-@router.get("/list", response_model=List[StockListResponse])
+@router.get("/list")
 async def get_tracked_stocks():
     """
     Get all tracked stocks.
@@ -43,14 +43,11 @@ async def get_tracked_stocks():
         logger.info("Getting all tracked stocks")
         stocks = stock_list_service.get_all_stocks()
         
-        return JSONResponse(
-            status_code=200,
-            content={
-                "stocks": [stock.model_dump() for stock in stocks] if stocks else [],
-                "count": len(stocks) if stocks else 0,
-                "message": f"Retrieved {len(stocks)} tracked stocks"
-            }
-        )
+        return {
+            "stocks": [stock.model_dump(mode='json') for stock in stocks] if stocks else [],
+            "count": len(stocks) if stocks else 0,
+            "message": f"Retrieved {len(stocks)} tracked stocks"
+        }
         
     except Exception as e:
         logger.error(f"Error getting tracked stocks: {str(e)}")
@@ -92,6 +89,37 @@ async def get_active_stock_symbols():
         )
 
 
+@router.get("/list/summary", response_model=StockListSummary)
+async def get_stock_list_summary():
+    """
+    Get a summary of the tracked stocks.
+    
+    Returns summary statistics about the tracked stocks including
+    total count, active count, and average settings.
+    
+    Returns:
+        Summary statistics about the tracked stocks
+    """
+    try:
+        logger.info("Getting stock list summary")
+        summary = stock_list_service.get_stock_list_summary()
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "summary": summary.model_dump(mode='json') if summary else None,
+                "message": "Stock list summary retrieved successfully"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting stock list summary: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve stock list summary: {str(e)}"
+        )
+
+
 @router.get("/list/{stock_id}", response_model=StockListResponse)
 async def get_tracked_stock(
     stock_id: int = Path(..., description="ID of the tracked stock to retrieve")
@@ -121,7 +149,7 @@ async def get_tracked_stock(
         return JSONResponse(
             status_code=200,
             content={
-                "stock": stock.model_dump() if stock else None,
+                "stock": stock.model_dump(mode='json') if stock else None,
                 "message": f"Retrieved tracked stock {stock.symbol}"
             }
         )
@@ -163,7 +191,7 @@ async def add_tracked_stock(request: AddStockRequest):
         return JSONResponse(
             status_code=201,
             content={
-                "stock": stock.model_dump() if stock else None,
+                "stock": stock.model_dump(mode='json') if stock else None,
                 "message": f"Successfully added {stock.symbol} to tracking list"
             }
         )
@@ -209,7 +237,7 @@ async def update_tracked_stock(
         return JSONResponse(
             status_code=200,
             content={
-                "stock": stock.model_dump() if stock else None,
+                "stock": stock.model_dump(mode='json') if stock else None,
                 "message": f"Successfully updated {stock.symbol}"
             }
         )
@@ -265,37 +293,6 @@ async def remove_tracked_stock(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to remove tracked stock: {str(e)}"
-        )
-
-
-@router.get("/list/summary", response_model=StockListSummary)
-async def get_stock_list_summary():
-    """
-    Get a summary of the tracked stocks.
-    
-    Returns summary statistics about the tracked stocks including
-    total count, active count, and average settings.
-    
-    Returns:
-        Summary statistics about the tracked stocks
-    """
-    try:
-        logger.info("Getting stock list summary")
-        summary = stock_list_service.get_stock_list_summary()
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "summary": summary.model_dump() if summary else None,
-                "message": "Stock list summary retrieved successfully"
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"Error getting stock list summary: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve stock list summary: {str(e)}"
         )
 
 

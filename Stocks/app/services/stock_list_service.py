@@ -108,7 +108,16 @@ class StockListService:
             
             for stock in self.tracked_stocks:
                 # Calculate days tracked
-                days_tracked = (datetime.utcnow() - stock.added_date).days
+                # Handle both datetime and string formats for added_date
+                if isinstance(stock.added_date, str):
+                    try:
+                        added_date = datetime.fromisoformat(stock.added_date.replace('Z', '+00:00'))
+                    except ValueError:
+                        added_date = datetime.utcnow()
+                else:
+                    added_date = stock.added_date
+                
+                days_tracked = (datetime.utcnow() - added_date).days
                 
                 # Get current price (optional, might fail)
                 current_price = None

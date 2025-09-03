@@ -51,7 +51,7 @@ async def get_alert_preferences():
         return JSONResponse(
             status_code=200,
             content={
-                "preferences": preferences.model_dump() if preferences else None,
+                "preferences": preferences.model_dump(mode='json') if preferences else None,
                 "message": "Alert preferences retrieved successfully"
             }
         )
@@ -93,7 +93,7 @@ async def update_alert_preferences(request: UpdateAlertPreferencesRequest):
         return JSONResponse(
             status_code=200,
             content={
-                "preferences": preferences.model_dump() if preferences else None,
+                "preferences": preferences.model_dump(mode='json') if preferences else None,
                 "message": "Alert preferences updated successfully"
             }
         )
@@ -132,7 +132,7 @@ async def reset_alert_preferences():
         return JSONResponse(
             status_code=200,
             content={
-                "preferences": preferences.model_dump() if preferences else None,
+                "preferences": preferences.model_dump(mode='json') if preferences else None,
                 "message": "Alert preferences reset to defaults successfully"
             }
         )
@@ -165,7 +165,7 @@ async def get_alert_preferences_summary():
         return JSONResponse(
             status_code=200,
             content={
-                "summary": summary.model_dump() if summary else None,
+                "summary": summary.model_dump(mode='json') if summary else None,
                 "message": "Alert preferences summary retrieved successfully"
             }
         )
