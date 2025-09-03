@@ -87,7 +87,7 @@ class StockListService:
         """Save tracked stocks to the storage file."""
         try:
             # Convert stocks to dictionaries for JSON serialization
-            stocks_data = [stock.dict() for stock in self.tracked_stocks]
+            stocks_data = [stock.model_dump() for stock in self.tracked_stocks]
             
             with open(self.storage_file, 'w') as f:
                 json.dump(stocks_data, f, indent=2, default=str)
