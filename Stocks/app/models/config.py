@@ -87,6 +87,11 @@ class Settings(BaseSettings):
         env="CHECK_INTERVAL_MINUTES", 
         description="How often to check stock prices (in minutes)"
     )
+    market_hours_schedule: bool = Field(
+        default=True,  # Default: use market hours schedule
+        env="MARKET_HOURS_SCHEDULE", 
+        description="Use market hours schedule (9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM EST)"
+    )
     
     # ===== DATABASE SETTINGS SECTION =====
     # Where we store our data

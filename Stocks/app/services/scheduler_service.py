@@ -113,15 +113,41 @@ class SchedulerService:
     async def _schedule_default_tasks(self):
         """Schedule default tasks."""
         try:
-            # Schedule stock price check
-            check_interval = SchedulerConfig.get_check_interval()
-            self.scheduler.add_job(
-                func=self._execute_stock_check,
-                trigger=IntervalTrigger(minutes=check_interval),
-                id='stock_price_check',
-                name='Stock Price Check',
-                replace_existing=True
-            )
+            # Schedule stock price check during market hours (9:30 AM - 4:00 PM EST)
+            # Market hours: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM EST
+            market_hours_schedule = getattr(settings, 'market_hours_schedule', True)
+            
+            if market_hours_schedule:
+                # Schedule for specific market hours (EST)
+                market_times = [
+                    {'hour': 9, 'minute': 35},   # 9:35 AM EST
+                    {'hour': 10, 'minute': 30},  # 10:30 AM EST  
+                    {'hour': 12, 'minute': 0},   # 12:00 PM EST
+                    {'hour': 14, 'minute': 0},   # 2:00 PM EST
+                    {'hour': 15, 'minute': 55}   # 3:55 PM EST
+                ]
+                
+                for i, time in enumerate(market_times):
+                    self.scheduler.add_job(
+                        func=self._execute_stock_check,
+                        trigger=CronTrigger(hour=time['hour'], minute=time['minute']),
+                        id=f'stock_price_check_{i+1}',
+                        name=f'Stock Price Check {time["hour"]:02d}:{time["minute"]:02d}',
+                        replace_existing=True
+                    )
+                
+                logger.info("Market hours schedule configured: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM EST")
+            else:
+                # Fallback to interval-based scheduling
+                check_interval = SchedulerConfig.get_check_interval()
+                self.scheduler.add_job(
+                    func=self._execute_stock_check,
+                    trigger=IntervalTrigger(minutes=check_interval),
+                    id='stock_price_check',
+                    name='Stock Price Check',
+                    replace_existing=True
+                )
+                logger.info(f"Interval-based schedule configured: every {check_interval} minutes")
             
             # Schedule cache cleanup (daily at 2 AM)
             self.scheduler.add_job(
