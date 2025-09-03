@@ -44,8 +44,8 @@ async def get_recent_alerts(limit: int = Query(10, ge=1, le=50, description="Num
         return JSONResponse(
             status_code=200,
             content={
-                "alerts": alerts,
-                "count": len(alerts),
+                "alerts": [alert.dict() for alert in alerts] if alerts else [],
+                "count": len(alerts) if alerts else 0,
                 "message": f"Retrieved {len(alerts)} recent alerts"
             }
         )
@@ -91,8 +91,8 @@ async def get_alerts_by_symbol(
             status_code=200,
             content={
                 "symbol": symbol,
-                "alerts": alerts,
-                "count": len(alerts),
+                "alerts": [alert.dict() for alert in alerts] if alerts else [],
+                "count": len(alerts) if alerts else 0,
                 "message": f"Retrieved {len(alerts)} alerts for {symbol}"
             }
         )
@@ -125,7 +125,7 @@ async def get_alert_summary():
         return JSONResponse(
             status_code=200,
             content={
-                "summary": summary,
+                "summary": summary.dict() if summary else None,
                 "message": "Alert history summary retrieved successfully"
             }
         )

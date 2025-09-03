@@ -46,8 +46,8 @@ async def get_tracked_stocks():
         return JSONResponse(
             status_code=200,
             content={
-                "stocks": stocks,
-                "count": len(stocks),
+                "stocks": [stock.dict() for stock in stocks] if stocks else [],
+                "count": len(stocks) if stocks else 0,
                 "message": f"Retrieved {len(stocks)} tracked stocks"
             }
         )
@@ -121,7 +121,7 @@ async def get_tracked_stock(
         return JSONResponse(
             status_code=200,
             content={
-                "stock": stock,
+                "stock": stock.dict() if stock else None,
                 "message": f"Retrieved tracked stock {stock.symbol}"
             }
         )
@@ -163,7 +163,7 @@ async def add_tracked_stock(request: AddStockRequest):
         return JSONResponse(
             status_code=201,
             content={
-                "stock": stock,
+                "stock": stock.dict() if stock else None,
                 "message": f"Successfully added {stock.symbol} to tracking list"
             }
         )
@@ -209,7 +209,7 @@ async def update_tracked_stock(
         return JSONResponse(
             status_code=200,
             content={
-                "stock": stock,
+                "stock": stock.dict() if stock else None,
                 "message": f"Successfully updated {stock.symbol}"
             }
         )
@@ -286,7 +286,7 @@ async def get_stock_list_summary():
         return JSONResponse(
             status_code=200,
             content={
-                "summary": summary,
+                "summary": summary.dict() if summary else None,
                 "message": "Stock list summary retrieved successfully"
             }
         )
