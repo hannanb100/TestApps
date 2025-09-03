@@ -212,6 +212,22 @@ app.include_router(api_router)
 app.include_router(health_router)
 
 
+# Simple health check endpoint for Railway
+@app.get("/health")
+async def simple_health():
+    """
+    Simple health check endpoint for Railway deployment.
+    
+    Returns:
+        Basic health status
+    """
+    return {
+        "status": "healthy",
+        "service": "AI Stock Tracking Agent",
+        "version": "1.0.0"
+    }
+
+
 # Root endpoint
 @app.get("/")
 async def root():
