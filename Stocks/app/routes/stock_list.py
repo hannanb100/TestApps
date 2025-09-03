@@ -180,7 +180,7 @@ async def add_tracked_stock(request: AddStockRequest):
     """
     try:
         logger.info(f"Adding new tracked stock: {request.symbol}")
-        stock = stock_list_service.add_stock(request)
+        stock = await stock_list_service.add_stock(request)
         
         if not stock:
             raise HTTPException(

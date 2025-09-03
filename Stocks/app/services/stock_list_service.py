@@ -223,7 +223,7 @@ class StockListService:
             logger.error(f"Error getting stock by ID {stock_id}: {str(e)}")
             return None
     
-    def add_stock(self, request: AddStockRequest) -> Optional[StockListResponse]:
+    async def add_stock(self, request: AddStockRequest) -> Optional[StockListResponse]:
         """
         Add a new stock to the tracking list.
         
@@ -247,17 +247,19 @@ class StockListService:
                 return None
             
             # Validate stock exists by fetching basic info
-            # Note: This is a simplified validation - in a real app you might want
-            # to make this method async or use a different validation approach
             try:
-                # For now, we'll do basic symbol validation
-                if len(symbol) < 1 or len(symbol) > 10:
-                    logger.error(f"Invalid stock symbol format: {symbol}")
+                # Import here to avoid circular imports
+                from .stock_service import StockService
+                stock_service = StockService()
+                
+                # Fetch stock information to validate the symbol and get company name
+                stock_info = await stock_service.get_stock_info(symbol)
+                
+                if not stock_info:
+                    logger.error(f"Stock symbol {symbol} not found or invalid")
                     return None
                 
-                # TODO: Add proper stock validation here
-                # This could be done by making the method async or using a sync validation
-                stock_info = {"name": request.name or symbol}  # Placeholder
+                logger.info(f"Found stock {symbol}: {stock_info.get('name', 'Unknown')}")
                 
             except Exception as e:
                 logger.error(f"Error validating stock {symbol}: {str(e)}")

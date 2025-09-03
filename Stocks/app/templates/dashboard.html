@@ -199,6 +199,19 @@
             display: none;
         }
         
+        .company-info {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background-color: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 6px;
+            color: #155724;
+        }
+        
+        .company-info small {
+            font-weight: 500;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -365,10 +378,9 @@
                     <div class="form-group">
                         <label for="symbol">Stock Symbol *</label>
                         <input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL, TSLA, MSFT" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="name">Company Name</label>
-                        <input type="text" id="name" name="name" placeholder="e.g., Apple Inc.">
+                        <div id="company-info" class="company-info" style="display: none;">
+                            <small id="company-name"></small>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="alert_threshold">Alert Threshold (%)</label>
@@ -434,6 +446,73 @@
         // Setup form event handlers
         function setupFormHandlers() {
             document.getElementById('add-stock-form').addEventListener('submit', handleAddStock);
+            
+            // Add event listener for symbol input to fetch company info
+            const symbolInput = document.getElementById('symbol');
+            symbolInput.addEventListener('blur', fetchCompanyInfo);
+            symbolInput.addEventListener('input', debounce(fetchCompanyInfo, 500));
+        }
+        
+        // Debounce function to limit API calls
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Fetch company information for a stock symbol
+        async function fetchCompanyInfo() {
+            const symbolInput = document.getElementById('symbol');
+            const companyInfo = document.getElementById('company-info');
+            const companyName = document.getElementById('company-name');
+            
+            const symbol = symbolInput.value.trim().toUpperCase();
+            
+            if (symbol.length < 1) {
+                companyInfo.style.display = 'none';
+                return;
+            }
+            
+            try {
+                // Show loading state
+                companyName.textContent = 'Looking up company...';
+                companyInfo.style.display = 'block';
+                
+                // Try to get stock quote which includes company name
+                const response = await fetch(`/api/v1/stocks/${symbol}/quote`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.quote && data.quote.name) {
+                        companyName.textContent = `✓ ${data.quote.name}`;
+                        companyInfo.style.backgroundColor = '#e8f5e8';
+                        companyInfo.style.borderColor = '#c3e6c3';
+                        companyInfo.style.color = '#155724';
+                    } else {
+                        companyName.textContent = `✓ ${symbol} (Company name not available)`;
+                        companyInfo.style.backgroundColor = '#fff3cd';
+                        companyInfo.style.borderColor = '#ffeaa7';
+                        companyInfo.style.color = '#856404';
+                    }
+                } else {
+                    companyName.textContent = `⚠ ${symbol} (Symbol not found)`;
+                    companyInfo.style.backgroundColor = '#f8d7da';
+                    companyInfo.style.borderColor = '#f5c6cb';
+                    companyInfo.style.color = '#721c24';
+                }
+            } catch (error) {
+                console.error('Error fetching company info:', error);
+                companyName.textContent = `⚠ ${symbol} (Unable to verify)`;
+                companyInfo.style.backgroundColor = '#f8d7da';
+                companyInfo.style.borderColor = '#f5c6cb';
+                companyInfo.style.color = '#721c24';
+            }
         }
         
         // Handle add stock form submission
@@ -443,7 +522,7 @@
             const formData = new FormData(event.target);
             const stockData = {
                 symbol: formData.get('symbol').toUpperCase(),
-                name: formData.get('name') || null,
+                // name will be fetched automatically by the backend
                 alert_threshold: parseFloat(formData.get('alert_threshold')),
                 alert_type: formData.get('alert_type'),
                 notes: formData.get('notes') || null
