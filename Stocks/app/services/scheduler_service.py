@@ -15,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.asyncio import AsyncIOExecutor
 
-from ..models.config import SchedulerConfig
+from ..models.config import SchedulerConfig, settings
 from ..models.stock import Stock, StockAlert
 
 # Configure logging
