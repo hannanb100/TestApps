@@ -3,100 +3,100 @@
     "id": 1,
     "symbol": "VOO",
     "name": "Vanguard S&P 500 ETF",
-    "added_date": "2025-09-03 18:09:17.616706",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.905860",
+    "current_price": null
   },
   {
     "id": 2,
     "symbol": "QQQM",
     "name": "Invesco NASDAQ 100 ETF",
-    "added_date": "2025-09-03 18:09:17.616713",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906092",
+    "current_price": null
   },
   {
     "id": 3,
     "symbol": "SCHD",
     "name": "Schwab U.S. Dividend Equity ETF",
-    "added_date": "2025-09-03 18:09:17.616715",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906099",
+    "current_price": null
   },
   {
     "id": 4,
     "symbol": "VT",
     "name": "Vanguard Total World Stock ETF",
-    "added_date": "2025-09-03 18:09:17.616717",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906103",
+    "current_price": null
   },
   {
     "id": 5,
     "symbol": "SPLG",
     "name": "SPDR Portfolio S&P 500 ETF",
-    "added_date": "2025-09-03 18:09:17.616719",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906111",
+    "current_price": null
   },
   {
     "id": 6,
     "symbol": "SPY",
     "name": "SPDR S&P 500 ETF Trust",
-    "added_date": "2025-09-03 18:09:17.616720",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906116",
+    "current_price": null
   },
   {
     "id": 7,
     "symbol": "JEPI",
     "name": "JPMorgan Equity Premium Income ETF",
-    "added_date": "2025-09-03 18:09:17.616722",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906119",
+    "current_price": null
   },
   {
     "id": 8,
     "symbol": "MSTY",
-    "name": "YieldMax MSTR Option Income Strategy ETF",
-    "added_date": "2025-09-03 18:09:17.616723",
-    "is_active": true,
+    "name": "YieldMax TSLA Option Income Strategy ETF",
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906129",
+    "current_price": null
   },
   {
     "id": 9,
     "symbol": "ARKK",
     "name": "ARK Innovation ETF",
-    "added_date": "2025-09-03 18:09:17.616725",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906133",
+    "current_price": null
   },
   {
     "id": 10,
     "symbol": "WDAY",
     "name": "Workday Inc.",
-    "added_date": "2025-09-03 18:09:17.616727",
-    "is_active": true,
     "alert_threshold": 3.0,
-    "alert_type": "BOTH",
-    "notes": null
+    "alert_type": "DAILY",
+    "is_active": true,
+    "added_date": "2025-09-03T18:33:01.906137",
+    "current_price": null
   }
 ]
