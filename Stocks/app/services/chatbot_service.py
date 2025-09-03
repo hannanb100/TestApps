@@ -25,10 +25,10 @@ import json  # For working with JSON data
 import re  # For text pattern matching
 
 # Third-party imports
-from langchain.llms import OpenAI  # OpenAI language model
+from langchain_openai import OpenAI  # OpenAI language model
 from langchain.prompts import PromptTemplate  # For creating AI prompts
 from langchain.chains import LLMChain  # For chaining AI operations
-from langchain.schema import BaseOutputParser  # For parsing AI responses
+from langchain_core.output_parsers import BaseOutputParser  # For parsing AI responses
 from pydantic import BaseModel, Field  # For data validation
 
 # Our custom imports
