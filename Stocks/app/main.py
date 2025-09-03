@@ -219,13 +219,18 @@ async def simple_health():
     Simple health check endpoint for Railway deployment.
     
     Returns:
-        Basic health status
+        Basic health status with HTTP 200
     """
-    return {
-        "status": "healthy",
-        "service": "AI Stock Tracking Agent",
-        "version": "1.0.0"
-    }
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "healthy",
+            "service": "AI Stock Tracking Agent",
+            "version": "1.0.0",
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
+    )
 
 
 # Root endpoint
