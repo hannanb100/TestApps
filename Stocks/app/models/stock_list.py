@@ -65,16 +65,36 @@ class StockListResponse(BaseModel):
     id: int
     symbol: str
     name: Optional[str]
-    added_date: datetime
+    added_date: Union[datetime, str]
     is_active: bool
     alert_threshold: float
     alert_type: str
     notes: Optional[str]
     
+    @validator('added_date', pre=True)
+    def parse_added_date(cls, v):
+        """Parse added_date from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return datetime.utcnow()
+        return v
+    
     # Computed fields for better user experience
     days_tracked: int = Field(..., description="Number of days this stock has been tracked")
     current_price: Optional[float] = Field(None, description="Current stock price (if available)")
-    last_alert: Optional[datetime] = Field(None, description="When the last alert was sent for this stock")
+    last_alert: Optional[Union[datetime, str]] = Field(None, description="When the last alert was sent for this stock")
+    
+    @validator('last_alert', pre=True)
+    def parse_last_alert(cls, v):
+        """Parse last_alert from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return None
+        return v
     
     class Config:
         """Pydantic configuration for the response model."""

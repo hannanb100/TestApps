@@ -74,9 +74,19 @@ class AlertHistoryResponse(BaseModel):
     alert_type: str
     analysis: str
     key_factors: List[str]
-    timestamp: datetime
+    timestamp: Union[datetime, str]
     threshold_used: float
     email_sent: bool
+    
+    @validator('timestamp', pre=True)
+    def parse_timestamp(cls, v):
+        """Parse timestamp from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return datetime.utcnow()
+        return v
     
     # Computed fields for better user experience
     price_change_dollar: float = Field(..., description="Dollar amount change (computed)")

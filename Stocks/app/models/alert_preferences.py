@@ -146,14 +146,34 @@ class AlertPreferencesResponse(BaseModel):
     enable_news_alerts: bool
     news_sentiment_threshold: float
     custom_schedule: Optional[Dict[str, Any]]
-    created_date: datetime
-    updated_date: datetime
+    created_date: Union[datetime, str]
+    updated_date: Union[datetime, str]
     is_active: bool
     
+    @validator('created_date', 'updated_date', pre=True)
+    def parse_datetime_fields(cls, v):
+        """Parse datetime fields from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return datetime.utcnow()
+        return v
+    
     # Computed fields for better user experience
-    next_alert_time: Optional[datetime] = Field(None, description="When the next alert is scheduled")
+    next_alert_time: Optional[Union[datetime, str]] = Field(None, description="When the next alert is scheduled")
     alerts_sent_today: int = Field(0, description="Number of alerts sent today")
     cooldown_active: bool = Field(False, description="Whether cooldown is currently active")
+    
+    @validator('next_alert_time', pre=True)
+    def parse_next_alert_time(cls, v):
+        """Parse next_alert_time from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return None
+        return v
     
     class Config:
         """Pydantic configuration for the response model."""
