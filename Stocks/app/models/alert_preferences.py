@@ -6,8 +6,8 @@ for alert thresholds, frequency, types, and other customization options.
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any, Union
+from pydantic import BaseModel, Field, validator
 
 
 class AlertPreferences(BaseModel):
@@ -98,9 +98,19 @@ class AlertPreferences(BaseModel):
     )
     
     # Metadata
-    created_date: datetime = Field(default_factory=datetime.utcnow, description="When preferences were created")
-    updated_date: datetime = Field(default_factory=datetime.utcnow, description="When preferences were last updated")
+    created_date: Union[datetime, str] = Field(default_factory=datetime.utcnow, description="When preferences were created")
+    updated_date: Union[datetime, str] = Field(default_factory=datetime.utcnow, description="When preferences were last updated")
     is_active: bool = Field(default=True, description="Whether these preferences are active")
+    
+    @validator('created_date', 'updated_date', pre=True)
+    def parse_datetime_fields(cls, v):
+        """Parse datetime fields from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return datetime.utcnow()
+        return v
     
     class Config:
         """Pydantic configuration for the model."""

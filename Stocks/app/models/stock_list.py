@@ -6,8 +6,8 @@ that are being monitored for price changes and alerts.
 """
 
 from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, Field
+from typing import Optional, List, Union
+from pydantic import BaseModel, Field, validator
 
 
 class TrackedStock(BaseModel):
@@ -26,8 +26,18 @@ class TrackedStock(BaseModel):
     name: Optional[str] = Field(None, description="Company name (e.g., Apple Inc.)")
     
     # Tracking settings
-    added_date: datetime = Field(default_factory=datetime.utcnow, description="When this stock was added to tracking")
+    added_date: Union[datetime, str] = Field(default_factory=datetime.utcnow, description="When this stock was added to tracking")
     is_active: bool = Field(default=True, description="Whether this stock is actively being monitored")
+    
+    @validator('added_date', pre=True)
+    def parse_added_date(cls, v):
+        """Parse added_date from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return datetime.utcnow()
+        return v
     
     # Alert preferences (can be customized per stock)
     alert_threshold: float = Field(default=3.0, description="Price change threshold for alerts (percentage)")

@@ -7,8 +7,8 @@ the analysis that was generated.
 """
 
 from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, Field
+from typing import Optional, List, Union
+from pydantic import BaseModel, Field, validator
 
 
 class AlertHistory(BaseModel):
@@ -34,7 +34,17 @@ class AlertHistory(BaseModel):
     key_factors: List[str] = Field(default_factory=list, description="Key factors that influenced the price change")
     
     # Timestamp information
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When the alert was sent")
+    timestamp: Union[datetime, str] = Field(default_factory=datetime.utcnow, description="When the alert was sent")
+    
+    @validator('timestamp', pre=True)
+    def parse_timestamp(cls, v):
+        """Parse timestamp from string or datetime."""
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                return datetime.utcnow()
+        return v
     
     # Additional metadata
     threshold_used: float = Field(..., description="Alert threshold that was used (e.g., 3.0 for 3%)")
