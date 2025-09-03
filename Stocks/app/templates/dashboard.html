@@ -377,8 +377,9 @@
                     <div class="form-group">
                         <label for="alert_type">Alert Type</label>
                         <select id="alert_type" name="alert_type">
-                            <option value="DAILY">Daily</option>
-                            <option value="INTRADAY">Intraday</option>
+                            <option value="BOTH">Both (Daily & Intraday)</option>
+                            <option value="DAILY">Daily Only</option>
+                            <option value="INTRADAY">Intraday Only</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -554,7 +555,7 @@
                 }
                 
                 // Load alert summary
-                const alertResponse = await fetch('/api/v1/alerts/history/summary');
+                const alertResponse = await fetch('/api/v1/alerts/summary');
                 const alertData = await alertResponse.json();
                 
                 if (alertData.summary) {

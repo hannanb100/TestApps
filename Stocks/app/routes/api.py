@@ -67,73 +67,75 @@ async def get_tracked_stocks():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/stocks/{symbol}")
-async def add_stock(symbol: str = Path(..., description="Stock symbol to add")):
-    """
-    Add a stock to the tracking list.
-    
-    Args:
-        symbol: Stock symbol to add
-        
-    Returns:
-        Success message with stock information
-    """
-    try:
-        symbol = symbol.upper()
-        
-        # Validate stock symbol
-        is_valid = await stock_service.validate_stock_symbol(symbol)
-        if not is_valid:
-            raise HTTPException(status_code=400, detail=f"Invalid stock symbol: {symbol}")
-        
-        # Get stock information
-        stock_info = await stock_service.get_stock_info(symbol)
-        if not stock_info:
-            raise HTTPException(status_code=404, detail=f"Stock not found: {symbol}")
-        
-        # In a real implementation, save to database
-        logger.info(f"Stock {symbol} added to tracking list")
-        
-        return {
-            "message": f"Stock {symbol} added successfully",
-            "symbol": symbol,
-            "name": stock_info.get("name", symbol),
-            "added_at": datetime.utcnow().isoformat()
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error adding stock {symbol}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+# DISABLED: Conflicts with new stock list API at /api/v1/stocks/list
+# @router.post("/stocks/{symbol}")
+# async def add_stock(symbol: str = Path(..., description="Stock symbol to add")):
+#     """
+#     Add a stock to the tracking list.
+#     
+#     Args:
+#         symbol: Stock symbol to add
+#         
+#     Returns:
+#         Success message with stock information
+#     """
+#     try:
+#         symbol = symbol.upper()
+#         
+#         # Validate stock symbol
+#         is_valid = await stock_service.validate_stock_symbol(symbol)
+#         if not is_valid:
+#             raise HTTPException(status_code=400, detail=f"Invalid stock symbol: {symbol}")
+#         
+#         # Get stock information
+#         stock_info = await stock_service.get_stock_info(symbol)
+#         if not stock_info:
+#             raise HTTPException(status_code=404, detail=f"Stock not found: {symbol}")
+#         
+#         # In a real implementation, save to database
+#         logger.info(f"Stock {symbol} added to tracking list")
+#         
+#         return {
+#             "message": f"Stock {symbol} added successfully",
+#             "symbol": symbol,
+#             "name": stock_info.get("name", symbol),
+#             "added_at": datetime.utcnow().isoformat()
+#         }
+#         
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"Error adding stock {symbol}: {str(e)}")
+#         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.delete("/stocks/{symbol}")
-async def remove_stock(symbol: str = Path(..., description="Stock symbol to remove")):
-    """
-    Remove a stock from the tracking list.
-    
-    Args:
-        symbol: Stock symbol to remove
-        
-    Returns:
-        Success message
-    """
-    try:
-        symbol = symbol.upper()
-        
-        # In a real implementation, remove from database
-        logger.info(f"Stock {symbol} removed from tracking list")
-        
-        return {
-            "message": f"Stock {symbol} removed successfully",
-            "symbol": symbol,
-            "removed_at": datetime.utcnow().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Error removing stock {symbol}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+# DISABLED: Conflicts with new stock list API at /api/v1/stocks/list/{id}
+# @router.delete("/stocks/{symbol}")
+# async def remove_stock(symbol: str = Path(..., description="Stock symbol to remove")):
+#     """
+#     Remove a stock from the tracking list.
+#     
+#     Args:
+#         symbol: Stock symbol to remove
+#         
+#     Returns:
+#         Success message
+#     """
+#     try:
+#         symbol = symbol.upper()
+#         
+#         # In a real implementation, remove from database
+#         logger.info(f"Stock {symbol} removed from tracking list")
+#         
+#         return {
+#             "message": f"Stock {symbol} removed successfully",
+#             "symbol": symbol,
+#             "removed_at": datetime.utcnow().isoformat()
+#         }
+#         
+#     except Exception as e:
+#         logger.error(f"Error removing stock {symbol}: {str(e)}")
+#         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/stocks/{symbol}/quote")
