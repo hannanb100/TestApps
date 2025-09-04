@@ -16,6 +16,7 @@ Features:
 
 import smtplib
 import logging
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -73,6 +74,13 @@ class EmailService:
         self.smtp_password = settings.smtp_password
         self.from_email = settings.from_email
         self.to_email = settings.to_email
+        
+        # Check if we're running on Railway and adjust settings
+        if os.getenv('RAILWAY_ENVIRONMENT'):
+            # Use more reliable SMTP settings for Railway
+            if self.smtp_server == "smtp.gmail.com":
+                self.smtp_port = 465  # Use SSL port for Railway
+                logger.info("Railway environment detected - using SSL port 465 for Gmail")
         
         # Service state
         self.message_history = []
@@ -295,11 +303,37 @@ class EmailService:
             msg.attach(text_part)
             msg.attach(html_part)
             
-            # Send email
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_username, self.smtp_password)
-                server.send_message(msg)
+            # Send email with better error handling and timeout
+            try:
+                # Use SSL if port is 465, otherwise use STARTTLS
+                if self.smtp_port == 465:
+                    logger.info(f"Using SSL connection to {self.smtp_server}:{self.smtp_port}")
+                    with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, timeout=30) as server:
+                        server.set_debuglevel(0)  # Disable debug output
+                        server.login(self.smtp_username, self.smtp_password)
+                        server.send_message(msg)
+                else:
+                    logger.info(f"Using STARTTLS connection to {self.smtp_server}:{self.smtp_port}")
+                    with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30) as server:
+                        server.set_debuglevel(0)  # Disable debug output
+                        server.starttls()
+                        server.login(self.smtp_username, self.smtp_password)
+                        server.send_message(msg)
+            except (smtplib.SMTPConnectError, smtplib.SMTPAuthenticationError, OSError) as e:
+                # If connection fails, try alternative approach
+                logger.warning(f"SMTP connection failed on port {self.smtp_port}: {str(e)}")
+                if self.smtp_port != 465:
+                    logger.info("Trying SSL connection on port 465 as fallback")
+                    try:
+                        with smtplib.SMTP_SSL(self.smtp_server, 465, timeout=30) as server:
+                            server.set_debuglevel(0)
+                            server.login(self.smtp_username, self.smtp_password)
+                            server.send_message(msg)
+                    except Exception as ssl_error:
+                        logger.error(f"SMTP SSL connection also failed: {str(ssl_error)}")
+                        raise e
+                else:
+                    raise e
             
             # Store in history
             self.message_history.append(email_msg)
