@@ -17,6 +17,7 @@ Features:
 import smtplib
 import logging
 import os
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -25,7 +26,6 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 import asyncio
 from dataclasses import dataclass
-import resend
 
 from ..models.config import settings
 
@@ -68,33 +68,25 @@ class EmailService:
     
     def __init__(self):
         """Initialize the email service with configuration"""
-        # Email configuration from settings
-        self.from_email = settings.from_email
-        self.to_email = settings.to_email
+        # Mailgun API credentials
+        self.mailgun_api_key = os.getenv('MAILGUN_API_KEY')
+        self.mailgun_domain = os.getenv('MAILGUN_DOMAIN')
         
-        # Resend API key
-        self.resend_api_key = os.getenv('RESEND_API_KEY')
+        # Use Mailgun sandbox domain for sending
+        self.from_email = f"postmaster@{self.mailgun_domain}" if self.mailgun_domain else "testingforben123@gmail.com"
+        self.to_email = "testingforben123@gmail.com"    # Your email
         
         # Service state
         self.message_history = []
-        self.is_mock_mode = not all([
-            self.resend_api_key,
-            self.from_email,
-            self.to_email
-        ])
+        self.is_mock_mode = not all([self.mailgun_api_key, self.mailgun_domain])
         
-        # Initialize Resend if API key is available
-        if self.resend_api_key:
-            resend.api_key = self.resend_api_key
-            logger.info("Resend email service initialized")
+        if not self.is_mock_mode:
+            logger.info("Mailgun email service initialized")
+            logger.info(f"From: {self.from_email}, To: {self.to_email}")
+            logger.info(f"Domain: {self.mailgun_domain}")
         else:
-            logger.warning("No Resend API key found - running in mock mode")
-        
-        if self.is_mock_mode:
             logger.info("Email service running in MOCK mode - emails will be logged to console")
-            logger.info("To enable real emails, configure RESEND_API_KEY in your .env file")
-        else:
-            logger.info("Email service initialized with Resend API")
+            logger.info("To enable real emails, configure MAILGUN_API_KEY and MAILGUN_DOMAIN in your .env file")
     
     async def send_email(self, 
                         to_email: str, 
@@ -301,26 +293,33 @@ class EmailService:
             msg.attach(text_part)
             msg.attach(html_part)
             
-            # Send email using Resend API
+            # Send email using Mailgun API
             try:
-                logger.info(f"Sending email via Resend to {email_msg.to_email}")
+                logger.info(f"Sending email via Mailgun to {email_msg.to_email}")
                 
-                # Send email using Resend
-                response = resend.Emails.send({
-                    "from": self.from_email,
-                    "to": [email_msg.to_email],
-                    "subject": email_msg.subject,
-                    "html": email_msg.html_content,
-                    "text": email_msg.text_content,
-                })
+                # Mailgun API endpoint
+                mailgun_url = f"https://api.mailgun.net/v3/{self.mailgun_domain}/messages"
                 
-                if response and hasattr(response, 'id'):
-                    logger.info(f"Email sent successfully via Resend. ID: {response.id}")
+                # Send email using Mailgun API (sandbox format)
+                response = requests.post(
+                    mailgun_url,
+                    auth=("api", self.mailgun_api_key),
+                    data={
+                        "from": f"Stock Alert System <{self.from_email}>",
+                        "to": f"Ben Hannan <{email_msg.to_email}>",
+                        "subject": email_msg.subject,
+                        "html": email_msg.html_content,
+                        "text": email_msg.text_content
+                    }
+                )
+                
+                if response.status_code == 200:
+                    logger.info(f"Email sent successfully via Mailgun to {email_msg.to_email}")
                 else:
-                    logger.warning(f"Email sent via Resend but no ID returned: {response}")
+                    logger.warning(f"Mailgun response: {response.status_code} - {response.text}")
                 
             except Exception as e:
-                logger.error(f"Failed to send email via Resend: {str(e)}")
+                logger.error(f"Failed to send email via Mailgun: {str(e)}")
                 # Don't raise the exception, just log it and continue
                 logger.warning("Continuing despite email send failure...")
             
