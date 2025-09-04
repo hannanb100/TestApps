@@ -30,7 +30,17 @@ class SchedulerService:
     alert processing, and other periodic tasks.
     """
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(SchedulerService, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
+        if self._initialized:
+            return
         """Initialize the scheduler service."""
         try:
             # Configure job stores and executors
@@ -65,6 +75,7 @@ class SchedulerService:
             self._check_count = 0
             
             logger.info("Scheduler service initialized successfully")
+            self._initialized = True
             
         except Exception as e:
             logger.error(f"Failed to initialize scheduler service: {str(e)}")
