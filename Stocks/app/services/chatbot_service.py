@@ -25,7 +25,7 @@ import json  # For working with JSON data
 import re  # For text pattern matching
 
 # Third-party imports
-from langchain_community.llms import OpenAI  # OpenAI language model
+from langchain_openai import ChatOpenAI  # OpenAI language model
 from langchain.prompts import PromptTemplate  # For creating AI prompts
 from langchain.chains import LLMChain  # For chaining AI operations
 from langchain_core.output_parsers import BaseOutputParser  # For parsing AI responses
@@ -153,10 +153,11 @@ class ChatbotService:
         """Initialize the chatbot service."""
         try:
             # Initialize OpenAI LLM
-            self.llm = OpenAI(
+            self.llm = ChatOpenAI(
                 openai_api_key=settings.openai_api_key,
                 temperature=0.1,  # Low temperature for consistent parsing
-                max_tokens=150
+                max_tokens=150,
+                model_name="gpt-3.5-turbo"
             )
             
             # Create command parsing prompt

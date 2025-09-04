@@ -133,7 +133,8 @@ class EmailService:
                               change_percent: float,
                               analysis: str,
                               key_factors: List[str],
-                              alert_type: str = "DAILY") -> Optional[EmailMessage]:
+                              alert_type: str = "DAILY",
+                              threshold_used: float = 3.0) -> Optional[EmailMessage]:
         """
         Send a formatted stock alert email.
         
@@ -211,7 +212,7 @@ class EmailService:
                     alert_type=alert_type,
                     analysis=analysis,
                     key_factors=key_factors,
-                    threshold_used=3.0,  # TODO: Get from settings
+                    threshold_used=threshold_used,
                     email_sent=email_result is not None
                 )
                 

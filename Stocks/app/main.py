@@ -385,7 +385,8 @@ async def stock_price_check_task():
                             change_percent=float(quote.change_percent),
                             analysis=analysis.analysis,
                             key_factors=analysis.key_factors if preferences.include_key_factors else [],
-                            alert_type=alert_type
+                            alert_type=alert_type,
+                            threshold_used=threshold
                         )
                     
             except Exception as e:

@@ -12,7 +12,7 @@ import asyncio
 import aiohttp
 import json
 
-from langchain_community.llms import OpenAI
+from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.tools import Tool
@@ -170,10 +170,11 @@ class AgentService:
         """Initialize the agent service."""
         try:
             # Initialize OpenAI LLM
-            self.llm = OpenAI(
+            self.llm = ChatOpenAI(
                 openai_api_key=settings.openai_api_key,
                 temperature=0.3,  # Balanced creativity and consistency
-                max_tokens=500
+                max_tokens=500,
+                model_name="gpt-3.5-turbo"
             )
             
             # Initialize news service
