@@ -93,7 +93,7 @@
     "id": 10,
     "symbol": "WDAY",
     "name": "Workday Inc.",
-    "alert_threshold": 3.0,
+    "alert_threshold": 1.0,
     "alert_type": "DAILY",
     "is_active": true,
     "added_date": "2025-09-03T18:33:01.906137",

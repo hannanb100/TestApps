@@ -313,8 +313,11 @@ class AlertPreferencesService:
         """
         Get the effective alert threshold for a stock.
         
+        This method checks for individual stock thresholds first, then falls back
+        to the global threshold if no individual threshold is set.
+        
         Args:
-            stock_symbol: Stock symbol (for future per-stock thresholds)
+            stock_symbol: Stock symbol to get threshold for
             
         Returns:
             Effective alert threshold percentage
@@ -323,6 +326,29 @@ class AlertPreferencesService:
             if not self.preferences:
                 return 3.0  # Default threshold
             
+            # If no stock symbol provided, return global threshold
+            if not stock_symbol:
+                return self.preferences.global_alert_threshold
+            
+            # Try to get individual stock threshold from stock list service
+            try:
+                from .stock_list_service import StockListService
+                stock_list_service = StockListService()
+                
+                # Get the stock from the tracked stocks list
+                tracked_stocks = stock_list_service.get_all_stocks()
+                if tracked_stocks and isinstance(tracked_stocks, list):
+                    for stock in tracked_stocks:
+                        if stock.symbol.upper() == stock_symbol.upper():
+                            logger.info(f"Using individual threshold {stock.alert_threshold}% for {stock_symbol}")
+                            return stock.alert_threshold
+                
+                logger.info(f"No individual threshold found for {stock_symbol}, using global threshold {self.preferences.global_alert_threshold}%")
+                
+            except Exception as e:
+                logger.warning(f"Error getting individual threshold for {stock_symbol}: {str(e)}")
+            
+            # Fall back to global threshold
             return self.preferences.global_alert_threshold
             
         except Exception as e:
