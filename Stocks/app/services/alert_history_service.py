@@ -25,7 +25,17 @@ class AlertHistoryService:
     for now, but could be easily upgraded to use a database later.
     """
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(AlertHistoryService, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self, storage_file: str = "alert_history.json"):
+        if self._initialized:
+            return
         """
         Initialize the alert history service.
         
@@ -36,6 +46,7 @@ class AlertHistoryService:
         self.alerts: List[AlertHistory] = []
         self._load_alerts()
         logger.info(f"AlertHistoryService initialized with {len(self.alerts)} existing alerts")
+        self._initialized = True
     
     def _load_alerts(self):
         """Load existing alerts from the storage file."""
