@@ -37,6 +37,9 @@ alembic>=1.13.0
 # Environment Management
 python-dotenv>=1.0.0
 
+# Email Service
+resend>=2.13.1
+
 # Logging
 structlog>=23.2.0
 

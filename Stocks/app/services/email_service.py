@@ -25,6 +25,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 import asyncio
 from dataclasses import dataclass
+import resend
 
 from ..models.config import settings
 
@@ -68,35 +69,32 @@ class EmailService:
     def __init__(self):
         """Initialize the email service with configuration"""
         # Email configuration from settings
-        self.smtp_server = settings.smtp_server
-        self.smtp_port = settings.smtp_port
-        self.smtp_username = settings.smtp_username
-        self.smtp_password = settings.smtp_password
         self.from_email = settings.from_email
         self.to_email = settings.to_email
         
-        # Check if we're running on Railway and adjust settings
-        if os.getenv('RAILWAY_ENVIRONMENT'):
-            # Use more reliable SMTP settings for Railway
-            if self.smtp_server == "smtp.gmail.com":
-                self.smtp_port = 465  # Use SSL port for Railway
-                logger.info("Railway environment detected - using SSL port 465 for Gmail")
+        # Resend API key
+        self.resend_api_key = os.getenv('RESEND_API_KEY')
         
         # Service state
         self.message_history = []
         self.is_mock_mode = not all([
-            self.smtp_server,
-            self.smtp_username,
-            self.smtp_password,
+            self.resend_api_key,
             self.from_email,
             self.to_email
         ])
         
+        # Initialize Resend if API key is available
+        if self.resend_api_key:
+            resend.api_key = self.resend_api_key
+            logger.info("Resend email service initialized")
+        else:
+            logger.warning("No Resend API key found - running in mock mode")
+        
         if self.is_mock_mode:
             logger.info("Email service running in MOCK mode - emails will be logged to console")
-            logger.info("To enable real emails, configure SMTP settings in your .env file")
+            logger.info("To enable real emails, configure RESEND_API_KEY in your .env file")
         else:
-            logger.info("Email service initialized with real SMTP configuration")
+            logger.info("Email service initialized with Resend API")
     
     async def send_email(self, 
                         to_email: str, 
@@ -303,37 +301,28 @@ class EmailService:
             msg.attach(text_part)
             msg.attach(html_part)
             
-            # Send email with better error handling and timeout
+            # Send email using Resend API
             try:
-                # Use SSL if port is 465, otherwise use STARTTLS
-                if self.smtp_port == 465:
-                    logger.info(f"Using SSL connection to {self.smtp_server}:{self.smtp_port}")
-                    with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, timeout=30) as server:
-                        server.set_debuglevel(0)  # Disable debug output
-                        server.login(self.smtp_username, self.smtp_password)
-                        server.send_message(msg)
+                logger.info(f"Sending email via Resend to {email_msg.to_email}")
+                
+                # Send email using Resend
+                response = resend.Emails.send({
+                    "from": self.from_email,
+                    "to": [email_msg.to_email],
+                    "subject": email_msg.subject,
+                    "html": email_msg.html_content,
+                    "text": email_msg.text_content,
+                })
+                
+                if response and hasattr(response, 'id'):
+                    logger.info(f"Email sent successfully via Resend. ID: {response.id}")
                 else:
-                    logger.info(f"Using STARTTLS connection to {self.smtp_server}:{self.smtp_port}")
-                    with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30) as server:
-                        server.set_debuglevel(0)  # Disable debug output
-                        server.starttls()
-                        server.login(self.smtp_username, self.smtp_password)
-                        server.send_message(msg)
-            except (smtplib.SMTPConnectError, smtplib.SMTPAuthenticationError, OSError) as e:
-                # If connection fails, try alternative approach
-                logger.warning(f"SMTP connection failed on port {self.smtp_port}: {str(e)}")
-                if self.smtp_port != 465:
-                    logger.info("Trying SSL connection on port 465 as fallback")
-                    try:
-                        with smtplib.SMTP_SSL(self.smtp_server, 465, timeout=30) as server:
-                            server.set_debuglevel(0)
-                            server.login(self.smtp_username, self.smtp_password)
-                            server.send_message(msg)
-                    except Exception as ssl_error:
-                        logger.error(f"SMTP SSL connection also failed: {str(ssl_error)}")
-                        raise e
-                else:
-                    raise e
+                    logger.warning(f"Email sent via Resend but no ID returned: {response}")
+                
+            except Exception as e:
+                logger.error(f"Failed to send email via Resend: {str(e)}")
+                # Don't raise the exception, just log it and continue
+                logger.warning("Continuing despite email send failure...")
             
             # Store in history
             self.message_history.append(email_msg)
