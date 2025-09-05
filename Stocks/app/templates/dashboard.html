@@ -117,6 +117,24 @@
             box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
         }
         
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            margin-right: 10px;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            margin-right: 10px;
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.3);
+        }
+        
         .stock-list {
             background: white;
             border-radius: 10px;
@@ -323,6 +341,78 @@
             margin: 20px 0;
         }
         
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover {
+            opacity: 0.7;
+        }
+        
+        .modal-body {
+            padding: 30px;
+        }
+        
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
         .refresh-btn {
             background: #3498db;
             color: white;
@@ -434,7 +524,61 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Edit Stock Modal -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Stock Settings</h3>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="edit-stock-form">
+                    <input type="hidden" id="edit-stock-id">
+                    
+                    <div class="form-group">
+                        <label for="edit-symbol">Stock Symbol</label>
+                        <input type="text" id="edit-symbol" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-name">Company Name</label>
+                        <input type="text" id="edit-name" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-threshold">Alert Threshold (%)</label>
+                        <input type="number" id="edit-threshold" step="0.1" min="0.1" max="50" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-alert-type">Alert Type</label>
+                        <select id="edit-alert-type" required>
+                            <option value="DAILY">Daily Only</option>
+                            <option value="INTRADAY">Intraday Only</option>
+                            <option value="BOTH">Both (Daily & Intraday)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-notes">Notes (Optional)</label>
+                        <input type="text" id="edit-notes" placeholder="Add any notes about this stock">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="edit-active"> Active (track this stock)
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="handleUpdateStock()">Update Stock</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Load dashboard data when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -604,6 +748,9 @@
                                         </div>
                                     </div>
                                     <div class="stock-actions">
+                                        <button class="btn btn-primary" onclick="handleEditStock(${stock.id}, '${stock.symbol}', ${stock.alert_threshold}, '${stock.alert_type}', '${stock.notes || ''}', ${stock.is_active})">
+                                            Edit
+                                        </button>
                                         <button class="btn btn-danger" onclick="handleRemoveStock(${stock.id}, '${stock.symbol}')">
                                             Remove
                                         </button>
@@ -671,6 +818,80 @@
             setTimeout(() => {
                 container.innerHTML = '';
             }, 5000);
+        }
+        
+        // Handle edit stock button click
+        function handleEditStock(stockId, symbol, threshold, alertType, notes, isActive) {
+            // Populate the modal form with current values
+            document.getElementById('edit-stock-id').value = stockId;
+            document.getElementById('edit-symbol').value = symbol;
+            document.getElementById('edit-name').value = symbol; // We'll fetch the real name
+            document.getElementById('edit-threshold').value = threshold;
+            document.getElementById('edit-alert-type').value = alertType;
+            document.getElementById('edit-notes').value = notes || '';
+            document.getElementById('edit-active').checked = isActive;
+            
+            // Show the modal
+            document.getElementById('edit-modal').style.display = 'block';
+        }
+        
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+            // Clear the form
+            document.getElementById('edit-stock-form').reset();
+        }
+        
+        // Handle update stock form submission
+        async function handleUpdateStock() {
+            const stockId = document.getElementById('edit-stock-id').value;
+            const threshold = parseFloat(document.getElementById('edit-threshold').value);
+            const alertType = document.getElementById('edit-alert-type').value;
+            const notes = document.getElementById('edit-notes').value;
+            const isActive = document.getElementById('edit-active').checked;
+            
+            // Validate input
+            if (!threshold || threshold < 0.1 || threshold > 50) {
+                showAlert('error', 'Please enter a valid threshold between 0.1% and 50%');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/v1/stocks/list/${stockId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        alert_threshold: threshold,
+                        alert_type: alertType,
+                        notes: notes || null,
+                        is_active: isActive
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('success', `Stock ${result.stock.symbol} updated successfully!`);
+                    closeEditModal();
+                    loadStockList();
+                    loadSystemStats();
+                } else {
+                    showAlert('error', result.detail || 'Failed to update stock');
+                }
+            } catch (error) {
+                console.error('Error updating stock:', error);
+                showAlert('error', 'Error updating stock. Please try again.');
+            }
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('edit-modal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
         }
     </script>
 </body>
