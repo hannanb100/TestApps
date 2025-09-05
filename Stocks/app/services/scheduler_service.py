@@ -148,6 +148,21 @@ class SchedulerService:
                     )
                 
                 logger.info("Market hours schedule configured: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM EST")
+                
+                # Debug: Show what times are actually being scheduled
+                from datetime import datetime
+                import pytz
+                utc = pytz.UTC
+                est = pytz.timezone('US/Eastern')
+                
+                logger.info(f"Scheduler timezone: {self.scheduler.timezone}")
+                logger.info("Scheduled times in UTC:")
+                for i, time in enumerate(market_times):
+                    # Create a datetime object for today with the scheduled time
+                    scheduled_time = datetime.now(utc).replace(hour=time['hour'], minute=time['minute'], second=0, microsecond=0)
+                    est_time = scheduled_time.astimezone(est)
+                    pst_time = scheduled_time.astimezone(pytz.timezone('US/Pacific'))
+                    logger.info(f"  {time['hour']:02d}:{time['minute']:02d} UTC = {est_time.strftime('%I:%M %p %Z')} = {pst_time.strftime('%I:%M %p %Z')}")
             else:
                 # Fallback to interval-based scheduling
                 check_interval = SchedulerConfig.get_check_interval()
