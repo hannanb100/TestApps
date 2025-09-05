@@ -425,8 +425,18 @@ TONE: Professional, data-driven, but accessible to retail investors. Be concise 
             factors.append("High market volatility")
         elif "Low volatility" in market_context:
             factors.append("Low market volatility")
+        elif "Moderate volatility" in market_context:
+            factors.append("Moderate market volatility")
         
-        if "S&P 500" in market_context:
+        # Sector performance factors
+        if "sector" in market_context.lower():
+            if "+" in market_context and change_percent < 0:
+                factors.append("Underperforming vs sector")
+            elif "-" in market_context and change_percent > 0:
+                factors.append("Outperforming vs sector")
+        
+        # General market performance factors
+        if "market" in market_context.lower() and "S&P" not in market_context:
             if "+" in market_context and change_percent < 0:
                 factors.append("Underperforming vs market")
             elif "-" in market_context and change_percent > 0:
@@ -546,43 +556,200 @@ TONE: Professional, data-driven, but accessible to retail investors. Be concise 
     
     async def _get_market_context(self, symbol: str) -> str:
         """
-        Get market context including sentiment and sector performance.
+        Get enhanced market context including geographic market, sector, and relevant volatility.
         
         Args:
             symbol: Stock symbol
             
         Returns:
-            Market context string
+            Enhanced market context string
         """
         try:
-            # Get VIX (fear index) for market sentiment
-            vix = yf.Ticker("^VIX")
+            # Determine geographic market and sector
+            market = self._get_stock_market(symbol)
+            sector = await self._get_stock_sector(symbol)
+            
+            # Get appropriate volatility index
+            volatility_data = await self._get_volatility_context(market)
+            
+            # Get sector-specific performance
+            sector_performance = await self._get_sector_performance(sector)
+            
+            # Get general market performance
+            general_market = await self._get_general_market_performance(market)
+            
+            return f"""Market Sentiment: {volatility_data}
+Sector Performance: {sector_performance}
+General Market: {general_market}
+Geographic Market: {market}
+Sector: {sector}"""
+            
+        except Exception as e:
+            logger.warning(f"Could not fetch market context: {e}")
+            return "Market context unavailable"
+    
+    def _get_stock_market(self, symbol: str) -> str:
+        """
+        Determine the geographic market for a stock based on symbol patterns.
+        
+        Args:
+            symbol: Stock symbol
+            
+        Returns:
+            Geographic market (US, UK, Japan, etc.)
+        """
+        # Check for common exchange suffixes
+        if symbol.endswith('.L'):  # London
+            return 'UK'
+        elif symbol.endswith('.T'):  # Tokyo
+            return 'Japan'
+        elif symbol.endswith('.DE'):  # Frankfurt
+            return 'Germany'
+        elif symbol.endswith('.PA'):  # Paris
+            return 'France'
+        elif symbol.endswith('.HK'):  # Hong Kong
+            return 'Hong Kong'
+        elif symbol.endswith('.SS'):  # Shanghai
+            return 'China'
+        else:
+            return 'US'  # Default to US
+    
+    async def _get_stock_sector(self, symbol: str) -> str:
+        """
+        Get the stock's sector using yfinance info.
+        
+        Args:
+            symbol: Stock symbol
+            
+        Returns:
+            Stock sector
+        """
+        try:
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+            return info.get('sector', 'Unknown')
+        except Exception as e:
+            logger.warning(f"Could not fetch sector for {symbol}: {e}")
+            return 'Unknown'
+    
+    async def _get_volatility_context(self, market: str) -> str:
+        """
+        Get volatility context for the specific market.
+        
+        Args:
+            market: Geographic market
+            
+        Returns:
+            Volatility sentiment string
+        """
+        try:
+            # Map markets to their volatility indices
+            volatility_tickers = {
+                'US': '^VIX',
+                'UK': '^VFTSE',
+                'Japan': '^VNKY',
+                'Germany': '^VDAX',
+                'France': '^VCAC',
+                'Hong Kong': '^VHSI',
+                'China': '^VXFXI'
+            }
+            
+            ticker_symbol = volatility_tickers.get(market, '^VIX')
+            vix = yf.Ticker(ticker_symbol)
             vix_data = vix.history(period="1d")
             vix_value = vix_data['Close'].iloc[-1] if not vix_data.empty else 20
             
             # Determine market sentiment based on VIX
             if vix_value > 30:
-                sentiment = "High volatility/Fear (VIX: {:.1f})".format(vix_value)
+                sentiment = f"High volatility/Fear ({ticker_symbol}: {vix_value:.1f})"
             elif vix_value > 20:
-                sentiment = "Moderate volatility (VIX: {:.1f})".format(vix_value)
+                sentiment = f"Moderate volatility ({ticker_symbol}: {vix_value:.1f})"
             else:
-                sentiment = "Low volatility/Complacency (VIX: {:.1f})".format(vix_value)
+                sentiment = f"Low volatility/Complacency ({ticker_symbol}: {vix_value:.1f})"
             
-            # Get S&P 500 performance for context
-            sp500 = yf.Ticker("^GSPC")
-            sp500_data = sp500.history(period="2d")
-            if len(sp500_data) >= 2:
-                sp500_change = ((sp500_data['Close'].iloc[-1] - sp500_data['Close'].iloc[-2]) / 
-                               sp500_data['Close'].iloc[-2]) * 100
-                market_performance = f"S&P 500: {sp500_change:+.2f}%"
-            else:
-                market_performance = "S&P 500: Data unavailable"
-            
-            return f"Market Sentiment: {sentiment}\nMarket Performance: {market_performance}"
+            return sentiment
             
         except Exception as e:
-            logger.warning(f"Could not fetch market context: {e}")
-            return "Market context unavailable"
+            logger.warning(f"Could not fetch volatility for {market}: {e}")
+            return f"Volatility data unavailable for {market}"
+    
+    async def _get_sector_performance(self, sector: str) -> str:
+        """
+        Get sector-specific performance using relevant ETF.
+        
+        Args:
+            sector: Stock sector
+            
+        Returns:
+            Sector performance string
+        """
+        try:
+            # Map sectors to relevant ETFs
+            sector_etf_map = {
+                'Technology': 'XLK',
+                'Financial Services': 'XLF',
+                'Healthcare': 'XLV',
+                'Consumer Discretionary': 'XLY',
+                'Consumer Staples': 'XLP',
+                'Energy': 'XLE',
+                'Utilities': 'XLU',
+                'Industrials': 'XLI',
+                'Materials': 'XLB',
+                'Real Estate': 'XLRE',
+                'Communication Services': 'XLC'
+            }
+            
+            etf_symbol = sector_etf_map.get(sector, 'SPY')
+            etf = yf.Ticker(etf_symbol)
+            etf_data = etf.history(period="2d")
+            
+            if len(etf_data) >= 2:
+                etf_change = ((etf_data['Close'].iloc[-1] - etf_data['Close'].iloc[-2]) / 
+                             etf_data['Close'].iloc[-2]) * 100
+                return f"{sector} sector ({etf_symbol}): {etf_change:+.2f}%"
+            else:
+                return f"{sector} sector ({etf_symbol}): Data unavailable"
+                
+        except Exception as e:
+            logger.warning(f"Could not fetch sector performance for {sector}: {e}")
+            return f"{sector} sector: Data unavailable"
+    
+    async def _get_general_market_performance(self, market: str) -> str:
+        """
+        Get general market performance for the geographic market.
+        
+        Args:
+            market: Geographic market
+            
+        Returns:
+            General market performance string
+        """
+        try:
+            # Map markets to their main indices
+            market_indices = {
+                'US': '^GSPC',      # S&P 500
+                'UK': '^FTSE',      # FTSE 100
+                'Japan': '^N225',   # Nikkei 225
+                'Germany': '^GDAXI', # DAX
+                'France': '^FCHI',  # CAC 40
+                'Hong Kong': '^HSI', # Hang Seng
+                'China': '^SSEC'    # Shanghai Composite
+            }
+            
+            index_symbol = market_indices.get(market, '^GSPC')
+            index = yf.Ticker(index_symbol)
+            index_data = index.history(period="2d")
+            
+            if len(index_data) >= 2:
+                index_change = ((index_data['Close'].iloc[-1] - index_data['Close'].iloc[-2]) / 
+                               index_data['Close'].iloc[-2]) * 100
+                return f"{market} market ({index_symbol}): {index_change:+.2f}%"
+            else:
+                return f"{market} market ({index_symbol}): Data unavailable"
+                
+        except Exception as e:
+            logger.warning(f"Could not fetch general market performance for {market}: {e}")
+            return f"{market} market: Data unavailable"
     
     async def _get_technical_analysis(self, symbol: str, current_price: float, 
                                     previous_close: float, volume: int) -> str:
