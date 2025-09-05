@@ -129,13 +129,14 @@ class SchedulerService:
             market_hours_schedule = getattr(settings, 'market_hours_schedule', True)
             
             if market_hours_schedule:
-                # Schedule for specific market hours (EST)
+                # Schedule for specific market hours (EST converted to UTC)
+                # EST is UTC-5, so add 5 hours to convert EST to UTC
                 market_times = [
-                    {'hour': 9, 'minute': 35},   # 9:35 AM EST
-                    {'hour': 10, 'minute': 30},  # 10:30 AM EST  
-                    {'hour': 12, 'minute': 0},   # 12:00 PM EST
-                    {'hour': 14, 'minute': 0},   # 2:00 PM EST
-                    {'hour': 15, 'minute': 55}   # 3:55 PM EST
+                    {'hour': 14, 'minute': 35},  # 9:35 AM EST = 2:35 PM UTC
+                    {'hour': 15, 'minute': 30},  # 10:30 AM EST = 3:30 PM UTC
+                    {'hour': 17, 'minute': 0},   # 12:00 PM EST = 5:00 PM UTC
+                    {'hour': 19, 'minute': 0},   # 2:00 PM EST = 7:00 PM UTC
+                    {'hour': 20, 'minute': 55}   # 3:55 PM EST = 8:55 PM UTC
                 ]
                 
                 for i, time in enumerate(market_times):
