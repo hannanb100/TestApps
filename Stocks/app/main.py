@@ -367,7 +367,8 @@ async def stock_price_check_task():
                     analysis = None
                     if preferences.include_analysis:
                         analysis = await agent_service.analyze_stock_movement(
-                            symbol, float(quote.previous_close), float(quote.price)
+                            symbol, float(quote.previous_close), float(quote.price), 
+                            int(quote.volume) if hasattr(quote, 'volume') else 0
                         )
                     else:
                         # Create minimal analysis if disabled

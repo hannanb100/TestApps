@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import asyncio
 import aiohttp
 import json
+import yfinance as yf
 
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
@@ -180,25 +181,45 @@ class AgentService:
             # Initialize news service
             self.news_service = NewsService()
             
-            # Create analysis prompt
+            # Create enhanced analysis prompt
             self.analysis_prompt = PromptTemplate(
-                input_variables=["symbol", "price_change", "change_percent", "news_summary"],
+                input_variables=["symbol", "price_change", "change_percent", "previous_close", 
+                               "current_price", "volume", "news_summary", "market_context", 
+                               "technical_analysis"],
                 template="""
-You are a financial analyst AI. Analyze the following stock movement and provide insights.
+You are an expert financial analyst with 15+ years of experience. Analyze this stock movement with professional insight.
 
-Stock: {symbol}
-Price Change: {price_change}
-Change Percentage: {change_percent}%
+STOCK MOVEMENT:
+- Symbol: {symbol}
+- Price Change: {price_change} ({change_percent:+.2f}%)
+- Previous Close: ${previous_close:.2f}
+- Current Price: ${current_price:.2f}
+- Volume: {volume:,} shares
 
-Recent News Summary:
+RECENT NEWS & EVENTS:
 {news_summary}
 
-Provide a concise analysis (2-3 sentences) that:
-1. Explains the likely reason for the price movement
-2. Mentions key factors or news that influenced it
-3. Gives context about what this means
+MARKET CONTEXT:
+{market_context}
 
-Keep it simple and user-friendly for SMS delivery.
+TECHNICAL ANALYSIS:
+{technical_analysis}
+
+ANALYSIS REQUIREMENTS:
+1. **Root Cause Analysis**: What specific factors drove this movement?
+2. **Market Context**: How does this compare to sector/overall market?
+3. **Technical Perspective**: Any notable technical patterns or levels?
+4. **Risk Assessment**: What are the key risks/opportunities?
+5. **Forward Outlook**: What to watch for in coming days?
+
+FORMAT:
+- Lead with the most important insight
+- Use bullet points for key factors
+- Include specific data points when relevant
+- Keep analysis concise but actionable (2-3 paragraphs max)
+- End with a clear recommendation (HOLD/SELL/BUY with brief reasoning)
+
+TONE: Professional, data-driven, but accessible to retail investors.
                 """.strip()
             )
             
@@ -215,14 +236,15 @@ Keep it simple and user-friendly for SMS delivery.
             raise
     
     async def analyze_stock_movement(self, symbol: str, previous_price: float, 
-                                   current_price: float) -> StockAnalysis:
+                                   current_price: float, volume: int = 0) -> StockAnalysis:
         """
-        Analyze stock price movement and generate insights.
+        Analyze stock price movement and generate enhanced insights.
         
         Args:
             symbol: Stock symbol
             previous_price: Previous price
             current_price: Current price
+            volume: Current volume (optional)
             
         Returns:
             StockAnalysis object with AI-generated insights
@@ -241,9 +263,18 @@ Keep it simple and user-friendly for SMS delivery.
             # Create news summary
             news_summary = self._create_news_summary(news_articles)
             
-            # Generate AI analysis
-            analysis_text = await self._generate_analysis(
-                symbol, change, change_percent, news_summary
+            # Get market context
+            market_context = await self._get_market_context(symbol)
+            
+            # Get technical analysis
+            technical_analysis = await self._get_technical_analysis(
+                symbol, current_price, previous_price, volume
+            )
+            
+            # Generate enhanced AI analysis
+            analysis_text = await self._generate_enhanced_analysis(
+                symbol, change, change_percent, previous_price, current_price, 
+                volume, news_summary, market_context, technical_analysis
             )
             
             # Extract key factors
@@ -264,7 +295,7 @@ Keep it simple and user-friendly for SMS delivery.
                 created_at=datetime.utcnow()
             )
             
-            logger.info(f"Generated analysis for {symbol} with confidence {confidence:.2f}")
+            logger.info(f"Generated enhanced analysis for {symbol} with confidence {confidence:.2f}")
             return analysis
             
         except Exception as e:
@@ -272,6 +303,45 @@ Keep it simple and user-friendly for SMS delivery.
             # Return fallback analysis
             return self._create_fallback_analysis(symbol, previous_price, current_price)
     
+    async def _generate_enhanced_analysis(self, symbol: str, change: float, 
+                                        change_percent: float, previous_close: float,
+                                        current_price: float, volume: int,
+                                        news_summary: str, market_context: str,
+                                        technical_analysis: str) -> str:
+        """
+        Generate enhanced AI analysis using LangChain with market context and technical analysis.
+        
+        Args:
+            symbol: Stock symbol
+            change: Price change amount
+            change_percent: Price change percentage
+            previous_close: Previous close price
+            current_price: Current price
+            volume: Current volume
+            news_summary: Summary of recent news
+            market_context: Market sentiment and performance
+            technical_analysis: Technical analysis data
+            
+        Returns:
+            AI-generated analysis text
+        """
+        try:
+            result = self.analysis_chain.run(
+                symbol=symbol,
+                price_change=f"${change:+.2f}",
+                change_percent=change_percent,
+                previous_close=previous_close,
+                current_price=current_price,
+                volume=volume,
+                news_summary=news_summary,
+                market_context=market_context,
+                technical_analysis=technical_analysis
+            )
+            return result.strip()
+        except Exception as e:
+            logger.error(f"Error generating enhanced analysis: {str(e)}")
+            return f"Analysis unavailable for {symbol}. Recent market activity and news may be influencing the price."
+
     async def _generate_analysis(self, symbol: str, change: float, 
                                change_percent: float, news_summary: str) -> str:
         """
@@ -408,6 +478,102 @@ Keep it simple and user-friendly for SMS delivery.
         
         return min(confidence, 1.0)
     
+    async def _get_market_context(self, symbol: str) -> str:
+        """
+        Get market context including sentiment and sector performance.
+        
+        Args:
+            symbol: Stock symbol
+            
+        Returns:
+            Market context string
+        """
+        try:
+            # Get VIX (fear index) for market sentiment
+            vix = yf.Ticker("^VIX")
+            vix_data = vix.history(period="1d")
+            vix_value = vix_data['Close'].iloc[-1] if not vix_data.empty else 20
+            
+            # Determine market sentiment based on VIX
+            if vix_value > 30:
+                sentiment = "High volatility/Fear (VIX: {:.1f})".format(vix_value)
+            elif vix_value > 20:
+                sentiment = "Moderate volatility (VIX: {:.1f})".format(vix_value)
+            else:
+                sentiment = "Low volatility/Complacency (VIX: {:.1f})".format(vix_value)
+            
+            # Get S&P 500 performance for context
+            sp500 = yf.Ticker("^GSPC")
+            sp500_data = sp500.history(period="2d")
+            if len(sp500_data) >= 2:
+                sp500_change = ((sp500_data['Close'].iloc[-1] - sp500_data['Close'].iloc[-2]) / 
+                               sp500_data['Close'].iloc[-2]) * 100
+                market_performance = f"S&P 500: {sp500_change:+.2f}%"
+            else:
+                market_performance = "S&P 500: Data unavailable"
+            
+            return f"Market Sentiment: {sentiment}\nMarket Performance: {market_performance}"
+            
+        except Exception as e:
+            logger.warning(f"Could not fetch market context: {e}")
+            return "Market context unavailable"
+    
+    async def _get_technical_analysis(self, symbol: str, current_price: float, 
+                                    previous_close: float, volume: int) -> str:
+        """
+        Get basic technical analysis using yfinance data.
+        
+        Args:
+            symbol: Stock symbol
+            current_price: Current stock price
+            previous_close: Previous close price
+            volume: Current volume
+            
+        Returns:
+            Technical analysis string
+        """
+        try:
+            # Get historical data for technical indicators
+            ticker = yf.Ticker(symbol)
+            hist_data = ticker.history(period="30d")
+            
+            if hist_data.empty:
+                return "Technical data unavailable"
+            
+            # Calculate basic technical indicators
+            current_volume = volume
+            avg_volume = hist_data['Volume'].mean()
+            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
+            
+            # Price levels
+            high_30d = hist_data['High'].max()
+            low_30d = hist_data['Low'].min()
+            current_position = (current_price - low_30d) / (high_30d - low_30d) * 100 if high_30d != low_30d else 50
+            
+            # Volume analysis
+            if volume_ratio > 2:
+                volume_analysis = f"High volume ({volume_ratio:.1f}x average)"
+            elif volume_ratio > 1.5:
+                volume_analysis = f"Above average volume ({volume_ratio:.1f}x average)"
+            elif volume_ratio < 0.5:
+                volume_analysis = f"Low volume ({volume_ratio:.1f}x average)"
+            else:
+                volume_analysis = f"Normal volume ({volume_ratio:.1f}x average)"
+            
+            # Price position analysis
+            if current_position > 80:
+                price_position = f"Near 30-day high (${high_30d:.2f})"
+            elif current_position < 20:
+                price_position = f"Near 30-day low (${low_30d:.2f})"
+            else:
+                price_position = f"Mid-range (${low_30d:.2f} - ${high_30d:.2f})"
+            
+            return f"Volume: {volume_analysis}\nPrice Position: {price_position}\n30-day Range: ${low_30d:.2f} - ${high_30d:.2f}"
+            
+        except Exception as e:
+            logger.warning(f"Could not perform technical analysis: {e}")
+            return "Technical analysis unavailable"
+
     def _create_fallback_analysis(self, symbol: str, previous_price: float, 
                                 current_price: float) -> StockAnalysis:
         """
