@@ -216,10 +216,12 @@ FORMAT:
 - Lead with the most important insight
 - Use bullet points for key factors
 - Include specific data points when relevant
-- Keep analysis concise but actionable (2-3 paragraphs max)
+- Keep analysis concise but actionable (1-2 paragraphs max)
 - End with a clear recommendation (HOLD/SELL/BUY with brief reasoning)
+- Use short, punchy sentences
+- Focus on the most critical insights only
 
-TONE: Professional, data-driven, but accessible to retail investors.
+TONE: Professional, data-driven, but accessible to retail investors. Be concise and direct.
                 """.strip()
             )
             
@@ -277,8 +279,10 @@ TONE: Professional, data-driven, but accessible to retail investors.
                 volume, news_summary, market_context, technical_analysis
             )
             
-            # Extract key factors
-            key_factors = self._extract_key_factors(news_articles, change_percent)
+            # Extract key factors from data
+            key_factors = self._extract_enhanced_key_factors(
+                symbol, change_percent, volume, market_context, technical_analysis, news_articles
+            )
             
             # Generate recommendation
             recommendation = self._generate_recommendation(change_percent, analysis_text)
@@ -389,6 +393,68 @@ TONE: Professional, data-driven, but accessible to retail investors.
         
         return "\n".join(summary_parts)
     
+    def _extract_enhanced_key_factors(self, symbol: str, change_percent: float, volume: int,
+                                    market_context: str, technical_analysis: str, 
+                                    news_articles: List[StockNews]) -> List[str]:
+        """
+        Extract key factors from all available data sources.
+        
+        Args:
+            symbol: Stock symbol
+            change_percent: Price change percentage
+            volume: Current volume
+            market_context: Market context string
+            technical_analysis: Technical analysis string
+            news_articles: List of news articles
+            
+        Returns:
+            List of key factors
+        """
+        factors = []
+        
+        # Price movement factor
+        if abs(change_percent) > 5:
+            factors.append(f"Major price move ({change_percent:+.1f}%)")
+        elif abs(change_percent) > 2:
+            factors.append(f"Significant move ({change_percent:+.1f}%)")
+        else:
+            factors.append(f"Price change ({change_percent:+.1f}%)")
+        
+        # Market context factors
+        if "High volatility" in market_context:
+            factors.append("High market volatility")
+        elif "Low volatility" in market_context:
+            factors.append("Low market volatility")
+        
+        if "S&P 500" in market_context:
+            if "+" in market_context and change_percent < 0:
+                factors.append("Underperforming vs market")
+            elif "-" in market_context and change_percent > 0:
+                factors.append("Outperforming vs market")
+        
+        # Technical factors
+        if "High volume" in technical_analysis:
+            factors.append("High trading volume")
+        elif "Low volume" in technical_analysis:
+            factors.append("Low trading volume")
+        
+        if "Near 30-day high" in technical_analysis:
+            factors.append("Near recent highs")
+        elif "Near 30-day low" in technical_analysis:
+            factors.append("Near recent lows")
+        
+        # News factors
+        if news_articles:
+            relevant_news = [a for a in news_articles if a.relevance_score and a.relevance_score > 0.5]
+            if relevant_news:
+                factors.append(f"Recent news ({len(relevant_news)} articles)")
+            else:
+                factors.append("No significant news")
+        else:
+            factors.append("No recent news")
+        
+        return factors[:6]  # Limit to 6 factors
+
     def _extract_key_factors(self, news_articles: List[StockNews], 
                            change_percent: float) -> List[str]:
         """

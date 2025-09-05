@@ -388,7 +388,7 @@ class EmailService:
                     
                     <div class="analysis">
                         <h3>🤖 AI Analysis</h3>
-                        <p>{analysis}</p>
+                        <div style="white-space: pre-line; line-height: 1.6; font-size: 14px;">{analysis}</div>
                     </div>
                     
                     <div class="factors">
