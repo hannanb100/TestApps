@@ -123,15 +123,8 @@ class StockListService:
                 
                 days_tracked = (datetime.utcnow() - added_date).days
                 
-                # Get current price (optional, might fail)
-                current_price = None
-                try:
-                    # Note: get_stock_info is async, but we're in a sync method
-                    # For now, we'll skip current price fetching in this method
-                    # TODO: Make this method async or use a different approach
-                    pass
-                except Exception as e:
-                    logger.debug(f"Could not get current price for {stock.symbol}: {str(e)}")
+                # Get current price from the stock model
+                current_price = stock.current_price
                 
                 # Create response object
                 response_stock = StockListResponse(
@@ -144,7 +137,7 @@ class StockListService:
                     notes=stock.notes,
                     days_tracked=days_tracked,
                     current_price=current_price,
-                    last_alert=None  # TODO: Get from alert history
+                    last_alert=stock.last_alert.isoformat() if isinstance(stock.last_alert, datetime) else stock.last_alert
                 )
                 
                 response_stocks.append(response_stock)
