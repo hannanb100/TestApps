@@ -192,22 +192,14 @@ class SchedulerService:
     async def _schedule_default_tasks(self):
         """Schedule default tasks."""
         try:
-            # Schedule stock price check during market hours (9:30 AM - 4:00 PM Eastern)
-            # Market hours: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM Eastern
+            # Get market hours schedule setting
             market_hours_schedule = getattr(settings, 'market_hours_schedule', True)
             
             if market_hours_schedule:
-                # Get timezone-aware market hours times
-                market_times = self._get_market_hours_utc_times()
-                
-                for i, time in enumerate(market_times):
-                    self.scheduler.add_job(
-                        func=self._execute_stock_check,
-                        trigger=CronTrigger(hour=time['hour'], minute=time['minute']),
-                        id=f'stock_price_check_{i+1}',
-                        name=f'Stock Price Check {time["hour"]:02d}:{time["minute"]:02d}',
-                        replace_existing=True
-                    )
+                # Use dynamic timezone-aware scheduling
+                utc_times = self._get_market_hours_utc_times()
+                utc_times_str = [f"{t['hour']:02d}:{t['minute']:02d}" for t in utc_times]
+                logger.info(f"Converted to UTC times: {utc_times_str}")
                 
                 # Debug: Show what times are actually being scheduled
                 utc_tz = pytz.UTC
@@ -216,7 +208,7 @@ class SchedulerService:
                 
                 logger.info(f"Scheduler timezone: {self.scheduler.timezone}")
                 logger.info("Scheduled times in UTC and their local equivalents:")
-                for i, time in enumerate(market_times):
+                for i, time in enumerate(utc_times):
                     # Create a datetime object for today with the scheduled time
                     scheduled_time = datetime.now(utc_tz).replace(hour=time['hour'], minute=time['minute'], second=0, microsecond=0)
                     eastern_time = scheduled_time.astimezone(eastern_tz)

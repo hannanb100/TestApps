@@ -38,6 +38,7 @@ from .services.stock_service import StockService  # Stock data fetching
 from .services.sms_service import SMSService  # SMS messaging (legacy)
 from .services.email_service import EmailService  # Email messaging
 from .services.agent_service import AgentService  # AI analysis
+from .services.alert_preferences_service import AlertPreferencesService  # Alert preferences management
 from .models.config import settings  # App configuration
 
 # Configure logging - this sets up how we record what happens in our app
@@ -55,6 +56,7 @@ stock_service = None      # Fetches stock data from the internet
 sms_service = None        # Sends and receives SMS messages (legacy)
 email_service = None      # Sends email alerts
 agent_service = None      # Uses AI to analyze stock movements
+alert_preferences_service = None  # Manages alert preferences and settings
 
 
 @asynccontextmanager
@@ -73,7 +75,7 @@ async def lifespan(app: FastAPI):
     when the app starts and stops.
     """
     # Make these variables available throughout the function
-    global scheduler_service, stock_service, sms_service, email_service, agent_service
+    global scheduler_service, stock_service, sms_service, email_service, agent_service, alert_preferences_service
     
     # ===== STARTUP PHASE =====
     logger.info("Starting AI Stock Tracking Agent...")
@@ -85,6 +87,7 @@ async def lifespan(app: FastAPI):
         sms_service = SMSService()          # Worker that sends SMS messages (legacy)
         email_service = EmailService()      # Worker that sends email alerts
         agent_service = AgentService()      # Worker that does AI analysis
+        alert_preferences_service = AlertPreferencesService()  # Worker that manages alert preferences
         scheduler_service = SchedulerService()  # Worker that schedules tasks
         
         # Tell the scheduler what tasks to run and when
@@ -328,10 +331,10 @@ async def stock_price_check_task():
         
         # Get dynamic list of tracked stocks from the stock list service
         from .services.stock_list_service import StockListService
-        from .services.alert_preferences_service import AlertPreferencesService
         
         stock_list_service = StockListService()
-        preferences_service = AlertPreferencesService()
+        # Use the global alert preferences service instance
+        global alert_preferences_service
         
         tracked_stocks = stock_list_service.get_active_stocks()
         
@@ -340,9 +343,9 @@ async def stock_price_check_task():
             return
         
         # Get alert preferences
-        preferences = preferences_service.get_preferences()
-        if not preferences or not preferences.is_active:
-            logger.warning("Alert preferences not active, skipping price checks")
+        preferences = alert_preferences_service.get_preferences()
+        if not preferences or not preferences.email_alerts_enabled:
+            logger.warning("Email alerts not enabled, skipping price checks")
             return
         
         for symbol in tracked_stocks:
@@ -353,7 +356,7 @@ async def stock_price_check_task():
                     continue
                 
                 # Check if alert should be triggered using simple threshold comparison
-                threshold = preferences_service.get_effective_threshold(symbol)
+                threshold = alert_preferences_service.get_effective_threshold(symbol)
                 current_price = float(quote.price)
                 previous_close = float(quote.previous_close)
                 
@@ -362,7 +365,7 @@ async def stock_price_check_task():
                 
                 if price_change_percent >= threshold:
                     # Check if alert should be sent based on preferences
-                    if not preferences_service.should_send_alert(symbol):
+                    if not alert_preferences_service.should_send_alert(symbol):
                         logger.info(f"Alert triggered for {symbol}: {price_change_percent:+.2f}% but alerts disabled")
                         continue
                     
