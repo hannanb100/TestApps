@@ -24,8 +24,10 @@ logger = logging.getLogger(__name__)
 # Create router for stock list endpoints
 router = APIRouter(prefix="/api/v1/stocks", tags=["stock-list"])
 
-# Initialize the stock list service
-stock_list_service = StockListService()
+# Initialize the stock list service with absolute path to match scheduler
+import os
+absolute_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tracked_stocks.json")
+stock_list_service = StockListService(storage_file=absolute_path)
 
 
 @router.get("/list")
