@@ -32,13 +32,17 @@ class StockListService:
     for now, but could be easily upgraded to use a database later.
     """
     
-    def __init__(self, storage_file: str = "tracked_stocks.json"):
+    def __init__(self, storage_file: str = None):
         """
         Initialize the stock list service.
         
         Args:
             storage_file: Path to the JSON file for storing tracked stocks
         """
+        if storage_file is None:
+            # Use absolute path to ensure consistency across different working directories
+            import os
+            storage_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tracked_stocks.json")
         self.storage_file = storage_file
         self.tracked_stocks: List[TrackedStock] = []
         self.stock_service = StockService()
