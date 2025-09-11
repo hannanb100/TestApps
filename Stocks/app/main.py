@@ -331,16 +331,24 @@ async def stock_price_check_task():
         
         # Get dynamic list of tracked stocks from the stock list service
         from .services.stock_list_service import StockListService
-        from .services.alert_preferences_service import AlertPreferencesService
         from .services.stock_service import StockService
         from .services.email_service import EmailService
         from .services.agent_service import AgentService
+        from .services.alert_preferences_service import AlertPreferencesService
         
         stock_list_service = StockListService()
-        alert_preferences_service = AlertPreferencesService()
-        stock_service = StockService()
-        email_service = EmailService()
-        agent_service = AgentService()
+        
+        # Try to use global services first, fallback to creating new instances
+        global stock_service, email_service, agent_service, alert_preferences_service
+        
+        if stock_service is None:
+            stock_service = StockService()
+        if email_service is None:
+            email_service = EmailService()
+        if agent_service is None:
+            agent_service = AgentService()
+        if alert_preferences_service is None:
+            alert_preferences_service = AlertPreferencesService()
         
         tracked_stocks = stock_list_service.get_active_stocks()
         

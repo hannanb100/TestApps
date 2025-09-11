@@ -7,7 +7,7 @@
     "is_active": true,
     "alert_threshold": 3.0,
     "notes": null,
-    "current_price": 604.57,
+    "current_price": 604.58,
     "last_alert": null
   },
   {
@@ -96,7 +96,7 @@
     "alert_threshold": 3.0,
     "notes": null,
     "current_price": 78.3,
-    "last_alert": "2025-09-11 20:17:39.600685"
+    "last_alert": "2025-09-11 20:25:48.010963"
   },
   {
     "id": 10,
