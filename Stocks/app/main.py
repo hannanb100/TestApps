@@ -331,24 +331,16 @@ async def stock_price_check_task():
         
         # Get dynamic list of tracked stocks from the stock list service
         from .services.stock_list_service import StockListService
+        from .services.alert_preferences_service import AlertPreferencesService
         from .services.stock_service import StockService
         from .services.email_service import EmailService
         from .services.agent_service import AgentService
-        from .services.alert_preferences_service import AlertPreferencesService
         
         stock_list_service = StockListService()
-        
-        # Try to use global services first, fallback to creating new instances
-        global stock_service, email_service, agent_service, alert_preferences_service
-        
-        if stock_service is None:
-            stock_service = StockService()
-        if email_service is None:
-            email_service = EmailService()
-        if agent_service is None:
-            agent_service = AgentService()
-        if alert_preferences_service is None:
-            alert_preferences_service = AlertPreferencesService()
+        preferences_service = AlertPreferencesService()
+        stock_service = StockService()
+        email_service = EmailService()
+        agent_service = AgentService()
         
         tracked_stocks = stock_list_service.get_active_stocks()
         
@@ -357,7 +349,7 @@ async def stock_price_check_task():
             return
         
         # Get alert preferences
-        preferences = alert_preferences_service.get_preferences()
+        preferences = preferences_service.get_preferences()
         if not preferences or not preferences.email_alerts_enabled:
             logger.warning("Email alerts not enabled, skipping price checks")
             return
@@ -375,7 +367,7 @@ async def stock_price_check_task():
                 stock_list_service.update_stock_price(symbol, current_price)
                 
                 # Check if alert should be triggered using simple threshold comparison
-                threshold = alert_preferences_service.get_effective_threshold(symbol)
+                threshold = preferences_service.get_effective_threshold(symbol)
                 previous_close = float(quote.previous_close)
                 
                 # Calculate percentage change from previous close
@@ -383,7 +375,7 @@ async def stock_price_check_task():
                 
                 if price_change_percent >= threshold:
                     # Check if alert should be sent based on preferences
-                    if not alert_preferences_service.should_send_alert(symbol):
+                    if not preferences_service.should_send_alert(symbol):
                         logger.info(f"Alert triggered for {symbol}: {price_change_percent:+.2f}% but alerts disabled")
                         continue
                     
