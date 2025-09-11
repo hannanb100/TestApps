@@ -40,8 +40,7 @@ class TrackedStock(BaseModel):
         return v
     
     # Alert preferences (can be customized per stock)
-    alert_threshold: float = Field(default=3.0, description="Price change threshold for alerts (percentage)")
-    alert_type: str = Field(default="BOTH", description="Alert type: DAILY, INTRADAY, or BOTH")
+    alert_threshold: float = Field(default=1.0, description="Price change threshold for alerts (percentage)")
     
     # Additional metadata
     notes: Optional[str] = Field(None, description="User notes about this stock")
@@ -68,7 +67,6 @@ class StockListResponse(BaseModel):
     added_date: Union[datetime, str]
     is_active: bool
     alert_threshold: float
-    alert_type: str
     notes: Optional[str]
     
     @validator('added_date', pre=True)
@@ -134,8 +132,7 @@ class AddStockRequest(BaseModel):
     
     symbol: str = Field(..., description="Stock symbol to add (e.g., AAPL, TSLA)")
     name: Optional[str] = Field(None, description="Company name (optional, will be fetched if not provided)")
-    alert_threshold: float = Field(default=3.0, ge=0.1, le=50.0, description="Alert threshold percentage (0.1-50.0)")
-    alert_type: str = Field(default="BOTH", description="Alert type: DAILY, INTRADAY, or BOTH")
+    alert_threshold: float = Field(default=1.0, ge=0.1, le=50.0, description="Alert threshold percentage (0.1-50.0)")
     notes: Optional[str] = Field(None, description="Optional notes about this stock")
     
     class Config:
@@ -144,8 +141,7 @@ class AddStockRequest(BaseModel):
             "example": {
                 "symbol": "AAPL",
                 "name": "Apple Inc.",
-                "alert_threshold": 3.0,
-                "alert_type": "BOTH",
+                "alert_threshold": 1.0,
                 "notes": "Tech giant, watch for earnings announcements"
             }
         }
@@ -162,7 +158,6 @@ class UpdateStockRequest(BaseModel):
     name: Optional[str] = Field(None, description="Company name")
     is_active: Optional[bool] = Field(None, description="Whether to actively monitor this stock")
     alert_threshold: Optional[float] = Field(None, ge=0.1, le=50.0, description="Alert threshold percentage")
-    alert_type: Optional[str] = Field(None, description="Alert type: DAILY, INTRADAY, or BOTH")
     notes: Optional[str] = Field(None, description="Notes about this stock")
     
     class Config:
@@ -172,7 +167,6 @@ class UpdateStockRequest(BaseModel):
                 "name": "Apple Inc.",
                 "is_active": True,
                 "alert_threshold": 2.5,
-                "alert_type": "DAILY",
                 "notes": "Updated notes about Apple"
             }
         }

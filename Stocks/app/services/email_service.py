@@ -133,7 +133,6 @@ class EmailService:
                               change_percent: float,
                               analysis: str,
                               key_factors: List[str],
-                              alert_type: str = "DAILY",
                               threshold_used: float = 3.0) -> Optional[EmailMessage]:
         """
         Send a formatted stock alert email.
@@ -145,7 +144,7 @@ class EmailService:
             change_percent: Percentage change
             analysis: AI-generated analysis
             key_factors: List of key factors
-            alert_type: Type of alert (DAILY, INTRADAY)
+            threshold_used: Alert threshold that was exceeded
             
         Returns:
             EmailMessage object if successful, None if failed
@@ -162,7 +161,7 @@ class EmailService:
                 emoji = "⚠️"
             
             # Create subject line
-            subject = f"{emoji} {symbol} {alert_type} Alert: {direction} {abs(change_percent):.2f}%"
+            subject = f"{emoji} {symbol} Alert: {direction} {abs(change_percent):.2f}%"
             
             # Create HTML content
             html_content = self._create_alert_html(
@@ -172,7 +171,6 @@ class EmailService:
                 change_percent=change_percent,
                 analysis=analysis,
                 key_factors=key_factors,
-                alert_type=alert_type,
                 direction=direction,
                 color=color,
                 emoji=emoji
@@ -185,8 +183,7 @@ class EmailService:
                 previous_price=previous_price,
                 change_percent=change_percent,
                 analysis=analysis,
-                key_factors=key_factors,
-                alert_type=alert_type
+                key_factors=key_factors
             )
             
             # Send the email
@@ -209,7 +206,6 @@ class EmailService:
                     current_price=current_price,
                     previous_price=previous_price,
                     change_percent=change_percent,
-                    alert_type=alert_type,
                     analysis=analysis,
                     key_factors=key_factors,
                     threshold_used=threshold_used,
@@ -341,7 +337,6 @@ class EmailService:
                           change_percent: float,
                           analysis: str,
                           key_factors: List[str],
-                          alert_type: str,
                           direction: str,
                           color: str,
                           emoji: str) -> str:
@@ -367,14 +362,12 @@ class EmailService:
                 .analysis {{ background-color: #e9ecef; padding: 15px; border-radius: 5px; margin: 15px 0; }}
                 .factors {{ background-color: #d1ecf1; padding: 15px; border-radius: 5px; margin: 15px 0; }}
                 .footer {{ background-color: #6c757d; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; }}
-                .alert-type {{ background-color: #ffc107; color: #212529; padding: 5px 10px; border-radius: 3px; font-size: 12px; font-weight: bold; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>{emoji} {symbol} {alert_type} Alert</h1>
-                    <div class="alert-type">{alert_type}</div>
+                    <h1>{emoji} {symbol} Alert</h1>
                 </div>
                 
                 <div class="content">
@@ -416,15 +409,14 @@ class EmailService:
                           previous_price: float, 
                           change_percent: float,
                           analysis: str,
-                          key_factors: List[str],
-                          alert_type: str) -> str:
+                          key_factors: List[str]) -> str:
         """Create plain text content for stock alert email"""
         
         change_amount = current_price - previous_price
         direction = "UP" if change_percent > 0 else "DOWN"
         
         text = f"""
-{symbol} {alert_type} ALERT
+{symbol} ALERT
 {'='*50}
 
 Price: ${current_price:.2f}

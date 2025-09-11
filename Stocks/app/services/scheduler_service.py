@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime, timedelta
 import asyncio
+import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
@@ -92,6 +93,73 @@ class SchedulerService:
         self._task_callbacks[task_name] = callback
         logger.info(f"Registered callback for task: {task_name}")
     
+    def _get_market_hours_utc_times(self) -> List[Dict[str, int]]:
+        """
+        Get market hours times converted to UTC based on current timezone.
+        
+        This method automatically handles EDT/EST transitions by using pytz
+        to determine the correct UTC offset for the current date.
+        
+        Returns:
+            List of dictionaries with 'hour' and 'minute' keys for UTC times
+        """
+        try:
+            # Define market hours in Eastern time
+            eastern_times = [
+                {'hour': 9, 'minute': 35},   # 9:35 AM Eastern
+                {'hour': 10, 'minute': 30},  # 10:30 AM Eastern
+                {'hour': 12, 'minute': 0},   # 12:00 PM Eastern
+                {'hour': 14, 'minute': 0},   # 2:00 PM Eastern
+                {'hour': 15, 'minute': 55}   # 3:55 PM Eastern
+            ]
+            
+            # Get Eastern timezone (handles EDT/EST automatically)
+            eastern_tz = pytz.timezone('US/Eastern')
+            utc_tz = pytz.UTC
+            
+            # Get current time in Eastern timezone to determine if we're in EDT or EST
+            now_eastern = datetime.now(eastern_tz)
+            is_dst = now_eastern.dst() != timedelta(0)
+            timezone_name = "EDT" if is_dst else "EST"
+            
+            # Convert each Eastern time to UTC
+            utc_times = []
+            for time_dict in eastern_times:
+                # Create a datetime object for today with the Eastern time
+                eastern_dt = eastern_tz.localize(
+                    datetime.now().replace(
+                        hour=time_dict['hour'],
+                        minute=time_dict['minute'],
+                        second=0,
+                        microsecond=0
+                    )
+                )
+                
+                # Convert to UTC
+                utc_dt = eastern_dt.astimezone(utc_tz)
+                
+                utc_times.append({
+                    'hour': utc_dt.hour,
+                    'minute': utc_dt.minute
+                })
+            
+            logger.info(f"Market hours schedule configured for {timezone_name}: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM Eastern")
+            utc_times_str = [f"{t['hour']:02d}:{t['minute']:02d}" for t in utc_times]
+            logger.info(f"Converted to UTC times: {utc_times_str}")
+            
+            return utc_times
+            
+        except Exception as e:
+            logger.error(f"Error calculating market hours UTC times: {str(e)}")
+            # Fallback to EDT times if there's an error
+            return [
+                {'hour': 13, 'minute': 35},  # 9:35 AM EDT = 1:35 PM UTC
+                {'hour': 14, 'minute': 30},  # 10:30 AM EDT = 2:30 PM UTC
+                {'hour': 16, 'minute': 0},   # 12:00 PM EDT = 4:00 PM UTC
+                {'hour': 18, 'minute': 0},   # 2:00 PM EDT = 6:00 PM UTC
+                {'hour': 19, 'minute': 55}   # 3:55 PM EDT = 7:55 PM UTC
+            ]
+    
     async def start(self):
         """Start the scheduler."""
         try:
@@ -124,20 +192,13 @@ class SchedulerService:
     async def _schedule_default_tasks(self):
         """Schedule default tasks."""
         try:
-            # Schedule stock price check during market hours (9:30 AM - 4:00 PM EST)
-            # Market hours: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM EST
+            # Schedule stock price check during market hours (9:30 AM - 4:00 PM Eastern)
+            # Market hours: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM Eastern
             market_hours_schedule = getattr(settings, 'market_hours_schedule', True)
             
             if market_hours_schedule:
-                # Schedule for specific market hours (EST converted to UTC)
-                # EST is UTC-5, so add 5 hours to convert EST to UTC
-                market_times = [
-                    {'hour': 14, 'minute': 35},  # 9:35 AM EST = 2:35 PM UTC
-                    {'hour': 15, 'minute': 30},  # 10:30 AM EST = 3:30 PM UTC
-                    {'hour': 17, 'minute': 0},   # 12:00 PM EST = 5:00 PM UTC
-                    {'hour': 19, 'minute': 0},   # 2:00 PM EST = 7:00 PM UTC
-                    {'hour': 20, 'minute': 55}   # 3:55 PM EST = 8:55 PM UTC
-                ]
+                # Get timezone-aware market hours times
+                market_times = self._get_market_hours_utc_times()
                 
                 for i, time in enumerate(market_times):
                     self.scheduler.add_job(
@@ -148,22 +209,19 @@ class SchedulerService:
                         replace_existing=True
                     )
                 
-                logger.info("Market hours schedule configured: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM EST")
-                
                 # Debug: Show what times are actually being scheduled
-                from datetime import datetime
-                import pytz
-                utc = pytz.UTC
-                est = pytz.timezone('US/Eastern')
+                utc_tz = pytz.UTC
+                eastern_tz = pytz.timezone('US/Eastern')
+                pacific_tz = pytz.timezone('US/Pacific')
                 
                 logger.info(f"Scheduler timezone: {self.scheduler.timezone}")
-                logger.info("Scheduled times in UTC:")
+                logger.info("Scheduled times in UTC and their local equivalents:")
                 for i, time in enumerate(market_times):
                     # Create a datetime object for today with the scheduled time
-                    scheduled_time = datetime.now(utc).replace(hour=time['hour'], minute=time['minute'], second=0, microsecond=0)
-                    est_time = scheduled_time.astimezone(est)
-                    pst_time = scheduled_time.astimezone(pytz.timezone('US/Pacific'))
-                    logger.info(f"  {time['hour']:02d}:{time['minute']:02d} UTC = {est_time.strftime('%I:%M %p %Z')} = {pst_time.strftime('%I:%M %p %Z')}")
+                    scheduled_time = datetime.now(utc_tz).replace(hour=time['hour'], minute=time['minute'], second=0, microsecond=0)
+                    eastern_time = scheduled_time.astimezone(eastern_tz)
+                    pacific_time = scheduled_time.astimezone(pacific_tz)
+                    logger.info(f"  {time['hour']:02d}:{time['minute']:02d} UTC = {eastern_time.strftime('%I:%M %p %Z')} = {pacific_time.strftime('%I:%M %p %Z')}")
             else:
                 # Fallback to interval-based scheduling
                 check_interval = SchedulerConfig.get_check_interval()

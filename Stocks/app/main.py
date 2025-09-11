@@ -352,16 +352,21 @@ async def stock_price_check_task():
                 if not quote:
                     continue
                 
-                # Check if alert should be triggered using preferences
+                # Check if alert should be triggered using simple threshold comparison
                 threshold = preferences_service.get_effective_threshold(symbol)
-                if abs(quote.change_percent) >= threshold:
+                current_price = float(quote.price)
+                previous_close = float(quote.previous_close)
+                
+                # Calculate percentage change from previous close
+                price_change_percent = abs((current_price - previous_close) / previous_close * 100)
+                
+                if price_change_percent >= threshold:
                     # Check if alert should be sent based on preferences
-                    alert_type = "DAILY"  # Could be determined based on comparison logic
-                    if not preferences_service.should_send_alert(symbol, alert_type):
-                        logger.info(f"Alert skipped for {symbol} due to preferences (cooldown, limit, etc.)")
+                    if not preferences_service.should_send_alert(symbol):
+                        logger.info(f"Alert triggered for {symbol}: {price_change_percent:+.2f}% but alerts disabled")
                         continue
                     
-                    logger.info(f"Alert triggered for {symbol}: {quote.change_percent:+.2f}%")
+                    logger.info(f"Alert triggered for {symbol}: {price_change_percent:+.2f}% (threshold: {threshold}%)")
                     
                     # Generate AI analysis (if enabled in preferences)
                     analysis = None
@@ -377,18 +382,16 @@ async def stock_price_check_task():
                             'key_factors': ["Price movement"]
                         })()
                     
-                    # Send email alert (if enabled in preferences)
-                    if preferences.email_alerts_enabled:
-                        await email_service.send_stock_alert(
-                            symbol=symbol,
-                            current_price=float(quote.price),
-                            previous_price=float(quote.previous_close),
-                            change_percent=float(quote.change_percent),
-                            analysis=analysis.analysis,
-                            key_factors=analysis.key_factors if preferences.include_key_factors else [],
-                            alert_type=alert_type,
-                            threshold_used=threshold
-                        )
+                    # Send email alert
+                    await email_service.send_stock_alert(
+                        symbol=symbol,
+                        current_price=current_price,
+                        previous_price=previous_close,
+                        change_percent=price_change_percent,
+                        analysis=analysis.analysis,
+                        key_factors=analysis.key_factors if preferences.include_key_factors else [],
+                        threshold_used=threshold
+                    )
                     
             except Exception as e:
                 logger.error(f"Error processing stock {symbol}: {str(e)}")

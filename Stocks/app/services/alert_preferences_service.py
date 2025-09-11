@@ -353,15 +353,14 @@ class AlertPreferencesService:
             
         except Exception as e:
             logger.error(f"Error getting effective threshold: {str(e)}")
-            return 3.0
+            return 1.0
     
-    def should_send_alert(self, stock_symbol: str, alert_type: str) -> bool:
+    def should_send_alert(self, stock_symbol: str) -> bool:
         """
         Check if an alert should be sent based on preferences.
         
         Args:
             stock_symbol: Stock symbol
-            alert_type: Type of alert (DAILY, INTRADAY, etc.)
             
         Returns:
             True if alert should be sent, False otherwise
@@ -370,15 +369,9 @@ class AlertPreferencesService:
             if not self.preferences or not self.preferences.is_active:
                 return False
             
-            # Check if alert type is enabled
-            if alert_type not in self.preferences.alert_types:
-                return False
-            
             # Check if email alerts are enabled
             if not self.preferences.email_alerts_enabled:
                 return False
-            
-            # TODO: Add more checks (cooldown, daily limit, etc.)
             
             return True
             

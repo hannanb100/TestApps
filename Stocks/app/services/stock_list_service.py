@@ -64,16 +64,16 @@ class StockListService:
     def _initialize_default_stocks(self):
         """Initialize with default tracked stocks."""
         default_stocks = [
-            TrackedStock(symbol="VOO", name="Vanguard S&P 500 ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="QQQM", name="Invesco NASDAQ 100 ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="SCHD", name="Schwab U.S. Dividend Equity ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="VT", name="Vanguard Total World Stock ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="SPLG", name="SPDR Portfolio S&P 500 ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="SPY", name="SPDR S&P 500 ETF Trust", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="JEPI", name="JPMorgan Equity Premium Income ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="MSTY", name="YieldMax MSTR Option Income Strategy ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="ARKK", name="ARK Innovation ETF", alert_threshold=3.0, alert_type="BOTH"),
-            TrackedStock(symbol="WDAY", name="Workday Inc.", alert_threshold=3.0, alert_type="BOTH")
+            TrackedStock(symbol="VOO", name="Vanguard S&P 500 ETF", alert_threshold=1.0),
+            TrackedStock(symbol="QQQM", name="Invesco NASDAQ 100 ETF", alert_threshold=1.0),
+            TrackedStock(symbol="SCHD", name="Schwab U.S. Dividend Equity ETF", alert_threshold=1.0),
+            TrackedStock(symbol="VT", name="Vanguard Total World Stock ETF", alert_threshold=1.0),
+            TrackedStock(symbol="SPLG", name="SPDR Portfolio S&P 500 ETF", alert_threshold=1.0),
+            TrackedStock(symbol="SPY", name="SPDR S&P 500 ETF Trust", alert_threshold=1.0),
+            TrackedStock(symbol="JEPI", name="JPMorgan Equity Premium Income ETF", alert_threshold=1.0),
+            TrackedStock(symbol="MSTY", name="YieldMax MSTR Option Income Strategy ETF", alert_threshold=1.0),
+            TrackedStock(symbol="ARKK", name="ARK Innovation ETF", alert_threshold=1.0),
+            TrackedStock(symbol="WDAY", name="Workday Inc.", alert_threshold=0.5)
         ]
         
         # Assign IDs to default stocks
@@ -137,7 +137,6 @@ class StockListService:
                     added_date=stock.added_date.isoformat() if isinstance(stock.added_date, datetime) else stock.added_date,
                     is_active=stock.is_active,
                     alert_threshold=stock.alert_threshold,
-                    alert_type=stock.alert_type,
                     notes=stock.notes,
                     days_tracked=days_tracked,
                     current_price=current_price,
@@ -209,7 +208,6 @@ class StockListService:
                 added_date=stock.added_date,
                 is_active=stock.is_active,
                 alert_threshold=stock.alert_threshold,
-                alert_type=stock.alert_type,
                 notes=stock.notes,
                 days_tracked=days_tracked,
                 current_price=current_price,
@@ -270,7 +268,6 @@ class StockListService:
                 symbol=symbol,
                 name=request.name or stock_info.get('name', symbol),
                 alert_threshold=request.alert_threshold,
-                alert_type=request.alert_type,
                 notes=request.notes,
                 added_date=datetime.utcnow(),
                 is_active=True
@@ -334,8 +331,6 @@ class StockListService:
                 stock.is_active = request.is_active
             if request.alert_threshold is not None:
                 stock.alert_threshold = request.alert_threshold
-            if request.alert_type is not None:
-                stock.alert_type = request.alert_type
             if request.notes is not None:
                 stock.notes = request.notes
             
@@ -354,7 +349,6 @@ class StockListService:
                 added_date=stock.added_date,
                 is_active=stock.is_active,
                 alert_threshold=stock.alert_threshold,
-                alert_type=stock.alert_type,
                 notes=stock.notes,
                 days_tracked=days_tracked,
                 current_price=None,  # TODO: Get current price

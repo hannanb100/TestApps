@@ -474,15 +474,7 @@
                     </div>
                     <div class="form-group">
                         <label for="alert_threshold">Alert Threshold (%)</label>
-                        <input type="number" id="alert_threshold" name="alert_threshold" value="3.0" step="0.1" min="0.1" max="50">
-                    </div>
-                    <div class="form-group">
-                        <label for="alert_type">Alert Type</label>
-                        <select id="alert_type" name="alert_type">
-                            <option value="BOTH">Both (Daily & Intraday)</option>
-                            <option value="DAILY">Daily Only</option>
-                            <option value="INTRADAY">Intraday Only</option>
-                        </select>
+                        <input type="number" id="alert_threshold" name="alert_threshold" value="1.0" step="0.1" min="0.1" max="50">
                     </div>
                     <div class="form-group">
                         <label for="notes">Notes (Optional)</label>
@@ -551,14 +543,6 @@
                         <input type="number" id="edit-threshold" step="0.1" min="0.1" max="50" required>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="edit-alert-type">Alert Type</label>
-                        <select id="edit-alert-type" required>
-                            <option value="DAILY">Daily Only</option>
-                            <option value="INTRADAY">Intraday Only</option>
-                            <option value="BOTH">Both (Daily & Intraday)</option>
-                        </select>
-                    </div>
                     
                     <div class="form-group">
                         <label for="edit-notes">Notes (Optional)</label>
@@ -668,7 +652,6 @@
                 symbol: formData.get('symbol').toUpperCase(),
                 // name will be fetched automatically by the backend
                 alert_threshold: parseFloat(formData.get('alert_threshold')),
-                alert_type: formData.get('alert_type'),
                 notes: formData.get('notes') || null
             };
             
@@ -742,13 +725,12 @@
                                         <div class="stock-name">${stock.name || 'N/A'}</div>
                                         <div class="stock-details">
                                             <span>Threshold: ${stock.alert_threshold}%</span>
-                                            <span>Type: ${stock.alert_type}</span>
                                             <span>Days tracked: ${stock.days_tracked}</span>
                                             ${stock.notes ? `<span>Notes: ${stock.notes}</span>` : ''}
                                         </div>
                                     </div>
                                     <div class="stock-actions">
-                                        <button class="btn btn-primary" onclick="handleEditStock(${stock.id}, '${stock.symbol}', ${stock.alert_threshold}, '${stock.alert_type}', '${stock.notes || ''}', ${stock.is_active})">
+                                        <button class="btn btn-primary" onclick="handleEditStock(${stock.id}, '${stock.symbol}', ${stock.alert_threshold}, '${stock.notes || ''}', ${stock.is_active})">
                                             Edit
                                         </button>
                                         <button class="btn btn-danger" onclick="handleRemoveStock(${stock.id}, '${stock.symbol}')">
@@ -821,13 +803,12 @@
         }
         
         // Handle edit stock button click
-        function handleEditStock(stockId, symbol, threshold, alertType, notes, isActive) {
+        function handleEditStock(stockId, symbol, threshold, notes, isActive) {
             // Populate the modal form with current values
             document.getElementById('edit-stock-id').value = stockId;
             document.getElementById('edit-symbol').value = symbol;
             document.getElementById('edit-name').value = symbol; // We'll fetch the real name
             document.getElementById('edit-threshold').value = threshold;
-            document.getElementById('edit-alert-type').value = alertType;
             document.getElementById('edit-notes').value = notes || '';
             document.getElementById('edit-active').checked = isActive;
             
@@ -846,7 +827,6 @@
         async function handleUpdateStock() {
             const stockId = document.getElementById('edit-stock-id').value;
             const threshold = parseFloat(document.getElementById('edit-threshold').value);
-            const alertType = document.getElementById('edit-alert-type').value;
             const notes = document.getElementById('edit-notes').value;
             const isActive = document.getElementById('edit-active').checked;
             
@@ -864,7 +844,6 @@
                     },
                     body: JSON.stringify({
                         alert_threshold: threshold,
-                        alert_type: alertType,
                         notes: notes || null,
                         is_active: isActive
                     })

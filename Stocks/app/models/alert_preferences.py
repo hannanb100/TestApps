@@ -23,7 +23,7 @@ class AlertPreferences(BaseModel):
     
     # Global alert settings
     global_alert_threshold: float = Field(
-        default=3.0, 
+        default=1.0, 
         ge=0.1, 
         le=50.0, 
         description="Global alert threshold percentage (0.1-50.0)"
@@ -41,11 +41,8 @@ class AlertPreferences(BaseModel):
         description="Only send alerts during market hours (9:30 AM - 4:00 PM EST)"
     )
     
-    # Alert type preferences
-    alert_types: List[str] = Field(
-        default_factory=lambda: ["DAILY", "INTRADAY"], 
-        description="Types of alerts to send: DAILY, INTRADAY, BOTH"
-    )
+    # Alert type preferences (simplified - single alert type)
+    # Removed alert_types field as we now use a single alert type
     
     # Email preferences
     email_alerts_enabled: bool = Field(default=True, description="Enable email alerts")
