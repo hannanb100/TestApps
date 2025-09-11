@@ -62,10 +62,10 @@ class AlertPreferencesService:
         """Initialize with default alert preferences."""
         self.preferences = AlertPreferences(
             id=1,
-            global_alert_threshold=3.0,
+            global_alert_threshold=1.0,  # Updated to 1.0% default
             alert_frequency="MARKET_HOURS",
             market_hours_only=True,
-            alert_types=["DAILY", "INTRADAY"],
+            # Removed alert_types field as it's no longer in the model
             email_alerts_enabled=True,
             email_rich_format=True,
             sms_alerts_enabled=False,
@@ -120,7 +120,7 @@ class AlertPreferencesService:
                 global_alert_threshold=self.preferences.global_alert_threshold,
                 alert_frequency=self.preferences.alert_frequency,
                 market_hours_only=self.preferences.market_hours_only,
-                alert_types=self.preferences.alert_types,
+                # Removed alert_types field as it's no longer in the model
                 email_alerts_enabled=self.preferences.email_alerts_enabled,
                 email_rich_format=self.preferences.email_rich_format,
                 sms_alerts_enabled=self.preferences.sms_alerts_enabled,
