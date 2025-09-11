@@ -129,7 +129,7 @@ class AlertPreferencesResponse(BaseModel):
     global_alert_threshold: float
     alert_frequency: str
     market_hours_only: bool
-    alert_types: List[str]
+    # Removed alert_types field as it's no longer in the model
     email_alerts_enabled: bool
     email_rich_format: bool
     sms_alerts_enabled: bool
