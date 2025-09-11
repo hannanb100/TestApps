@@ -107,8 +107,9 @@ class AlertPreferencesService:
         """
         try:
             if not self.preferences:
-                logger.warning("No alert preferences found")
-                return None
+                logger.warning("No alert preferences found, initializing defaults")
+                self._initialize_default_preferences()
+                self._save_preferences()
             
             # Calculate computed fields
             next_alert_time = self._calculate_next_alert_time()
