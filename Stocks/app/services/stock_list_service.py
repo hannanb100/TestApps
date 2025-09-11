@@ -389,6 +389,44 @@ class StockListService:
             logger.error(f"Error removing stock {stock_id}: {str(e)}")
             return False
     
+    def update_stock_price(self, symbol: str, current_price: float, last_alert: Optional[datetime] = None) -> bool:
+        """
+        Update the current price and last alert time for a stock.
+        
+        Args:
+            symbol: Stock symbol to update
+            current_price: Current stock price
+            last_alert: When the last alert was sent (optional)
+            
+        Returns:
+            True if updated successfully, False otherwise
+        """
+        try:
+            # Find the stock by symbol
+            stock = None
+            for s in self.tracked_stocks:
+                if s.symbol.upper() == symbol.upper():
+                    stock = s
+                    break
+            
+            if not stock:
+                logger.warning(f"Stock {symbol} not found for price update")
+                return False
+            
+            # Update the price and alert time
+            stock.current_price = current_price
+            if last_alert:
+                stock.last_alert = last_alert
+            
+            # Save the updated data
+            self._save_stocks()
+            logger.info(f"Updated price for {symbol}: ${current_price}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating stock price for {symbol}: {str(e)}")
+            return False
+    
     def get_stock_list_summary(self) -> StockListSummary:
         """
         Get a summary of the tracked stocks.

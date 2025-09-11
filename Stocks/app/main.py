@@ -353,11 +353,15 @@ async def stock_price_check_task():
                 # Get current quote
                 quote = await stock_service.get_stock_quote(symbol)
                 if not quote:
+                    logger.warning(f"No quote data available for {symbol}")
                     continue
+                
+                # Update the stock price in the database
+                current_price = float(quote.price)
+                stock_list_service.update_stock_price(symbol, current_price)
                 
                 # Check if alert should be triggered using simple threshold comparison
                 threshold = alert_preferences_service.get_effective_threshold(symbol)
-                current_price = float(quote.price)
                 previous_close = float(quote.previous_close)
                 
                 # Calculate percentage change from previous close
@@ -395,6 +399,10 @@ async def stock_price_check_task():
                         key_factors=analysis.key_factors if preferences.include_key_factors else [],
                         threshold_used=threshold
                     )
+                    
+                    # Update the last alert time in the database
+                    from datetime import datetime
+                    stock_list_service.update_stock_price(symbol, current_price, datetime.utcnow())
                     
             except Exception as e:
                 logger.error(f"Error processing stock {symbol}: {str(e)}")
