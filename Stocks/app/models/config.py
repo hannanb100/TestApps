@@ -48,6 +48,13 @@ class Settings(BaseSettings):
         description="OpenAI API key for AI analysis - get this from OpenAI.com"
     )
     
+    # LLM Model configuration
+    llm_model: str = Field(
+        default="gpt-4o",  # Default to GPT-4o for better compatibility
+        env="LLM_MODEL",  # Look for this environment variable
+        description="OpenAI model to use for analysis (e.g., gpt-4o, gpt-5, gpt-3.5-turbo)"
+    )
+    
     # Twilio settings (for SMS) - these have default "MOCK" values for testing
     twilio_account_sid: str = Field(
         default="MOCK_ACCOUNT_SID",  # Default value if not set

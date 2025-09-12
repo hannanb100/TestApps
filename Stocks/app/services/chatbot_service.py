@@ -152,13 +152,36 @@ class ChatbotService:
     def __init__(self):
         """Initialize the chatbot service."""
         try:
-            # Initialize OpenAI LLM
-            self.llm = ChatOpenAI(
-                openai_api_key=settings.openai_api_key,
-                temperature=0.1,  # Low temperature for consistent parsing
-                max_tokens=150,
-                model_name="gpt-3.5-turbo"
-            )
+            # Get the model from settings
+            model = settings.llm_model
+            
+            # Common arguments for all models
+            common_args = {
+                "openai_api_key": settings.openai_api_key,
+                "max_tokens": 150,
+            }
+            
+            # Configure model-specific arguments
+            # GPT-5 has different parameters than other models
+            if model.startswith("gpt-5"):
+                llm_args = {
+                    **common_args,
+                    "model_name": model,
+                    "verbosity": "low",  # Low verbosity for chatbot parsing
+                    "reasoning_effort": "low"  # Low effort for simple parsing tasks
+                }
+            else:
+                # For GPT-4, GPT-3.5, and other models
+                llm_args = {
+                    **common_args,
+                    "model_name": model,
+                    "temperature": 0.1  # Low temperature for consistent parsing
+                }
+            
+            # Initialize OpenAI LLM with the configured arguments
+            self.llm = ChatOpenAI(**llm_args)
+            
+            logger.info(f"Initialized chatbot LLM with model: {model} and args: {llm_args}")
             
             # Create command parsing prompt
             self.command_prompt = PromptTemplate(
