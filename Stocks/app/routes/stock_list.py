@@ -59,6 +59,85 @@ async def get_tracked_stocks():
         )
 
 
+@router.get("/list/with-prices")
+async def get_tracked_stocks_with_prices():
+    """
+    Get all tracked stocks with current prices fetched on-demand.
+    
+    This endpoint fetches real-time stock prices for all tracked stocks.
+    This is used by the web dashboard to display current prices without
+    relying on stored data that might have persistence issues.
+    
+    Returns:
+        List of tracked stocks with current prices and last alert times
+    """
+    try:
+        logger.info("Getting tracked stocks with current prices")
+        
+        # Import here to avoid circular imports
+        from ..services.stock_service import StockService
+        from datetime import datetime
+        
+        # Create service instance
+        stock_service = StockService()
+        
+        # Get the basic stock list
+        stocks = stock_list_service.get_all_stocks()
+        
+        # Fetch current prices for each stock
+        stocks_with_prices = []
+        for stock in stocks:
+            try:
+                # Fetch current price for this stock
+                quote = await stock_service.get_stock_quote(stock.symbol)
+                
+                if quote:
+                    # Create enhanced stock data with current price
+                    stock_data = stock.model_dump(mode='json')
+                    stock_data['current_price'] = float(quote.price)
+                    stock_data['last_alert'] = None  # TODO: Implement last alert tracking
+                    stock_data['price_change'] = float(quote.price) - float(quote.previous_close)
+                    stock_data['price_change_percent'] = ((float(quote.price) - float(quote.previous_close)) / float(quote.previous_close)) * 100
+                    stock_data['last_updated'] = datetime.utcnow().isoformat()
+                    
+                    stocks_with_prices.append(stock_data)
+                else:
+                    # If we can't get price data, include the stock without price info
+                    stock_data = stock.model_dump(mode='json')
+                    stock_data['current_price'] = None
+                    stock_data['last_alert'] = None
+                    stock_data['price_change'] = None
+                    stock_data['price_change_percent'] = None
+                    stock_data['last_updated'] = None
+                    stock_data['error'] = "Unable to fetch current price"
+                    
+                    stocks_with_prices.append(stock_data)
+                    
+            except Exception as e:
+                logger.warning(f"Error fetching price for {stock.symbol}: {str(e)}")
+                # Include the stock with error information
+                stock_data = stock.model_dump(mode='json')
+                stock_data['current_price'] = None
+                stock_data['last_alert'] = None
+                stock_data['price_change'] = None
+                stock_data['price_change_percent'] = None
+                stock_data['last_updated'] = None
+                stock_data['error'] = f"Error: {str(e)}"
+                
+                stocks_with_prices.append(stock_data)
+        
+        return {
+            "stocks": stocks_with_prices,
+            "count": len(stocks_with_prices),
+            "message": f"Retrieved {len(stocks_with_prices)} tracked stocks with current prices",
+            "last_updated": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting tracked stocks with prices: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve tracked stocks with prices")
+
+
 @router.get("/list/active", response_model=List[str])
 async def get_active_stock_symbols():
     """

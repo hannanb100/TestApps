@@ -706,18 +706,27 @@
             }
         }
         
-        // Load stock list
+        // Load stock list with current prices
         async function loadStockList() {
             const container = document.getElementById('stock-list-container');
-            container.innerHTML = '<div class="loading">Loading stocks...</div>';
+            container.innerHTML = '<div class="loading">Loading stocks with current prices...</div>';
             
             try {
-                const response = await fetch('/api/v1/stocks/list');
+                // Use the new endpoint that fetches prices on-demand
+                const response = await fetch('/api/v1/stocks/list/with-prices');
                 const data = await response.json();
                 
                 if (data.stocks && data.stocks.length > 0) {
                     container.innerHTML = `
                         <div class="stock-list">
+                            <div class="refresh-section" style="margin-bottom: 15px; text-align: right;">
+                                <button class="refresh-btn" onclick="loadStockList()" title="Refresh prices">
+                                    🔄 Refresh Prices
+                                </button>
+                                <small style="color: #6c757d; margin-left: 10px;">
+                                    Last updated: ${data.last_updated ? new Date(data.last_updated).toLocaleTimeString() : 'Unknown'}
+                                </small>
+                            </div>
                             ${data.stocks.map(stock => `
                                 <div class="stock-item">
                                     <div class="stock-info">
@@ -728,6 +737,32 @@
                                             <span>Days tracked: ${stock.days_tracked}</span>
                                             ${stock.notes ? `<span>Notes: ${stock.notes}</span>` : ''}
                                         </div>
+                                        ${stock.current_price ? `
+                                            <div class="price-info" style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 5px;">
+                                                <div style="font-size: 1.2em; font-weight: bold; color: #2c3e50;">
+                                                    $${stock.current_price.toFixed(2)}
+                                                    ${stock.price_change_percent ? `
+                                                        <span style="font-size: 0.9em; color: ${stock.price_change_percent >= 0 ? '#28a745' : '#dc3545'};">
+                                                            ${stock.price_change_percent >= 0 ? '↗' : '↘'} ${Math.abs(stock.price_change_percent).toFixed(2)}%
+                                                        </span>
+                                                    ` : ''}
+                                                </div>
+                                                ${stock.price_change ? `
+                                                    <div style="font-size: 0.9em; color: #6c757d;">
+                                                        ${stock.price_change >= 0 ? '+' : ''}${stock.price_change.toFixed(2)} from previous close
+                                                    </div>
+                                                ` : ''}
+                                                ${stock.last_alert ? `
+                                                    <div style="font-size: 0.8em; color: #6c757d;">
+                                                        Last alert: ${new Date(stock.last_alert).toLocaleString()}
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        ` : `
+                                            <div class="price-info" style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 5px; color: #856404;">
+                                                ${stock.error || 'Price data unavailable'}
+                                            </div>
+                                        `}
                                     </div>
                                     <div class="stock-actions">
                                         <button class="btn btn-primary" onclick="handleEditStock(${stock.id}, '${stock.symbol}', ${stock.alert_threshold}, '${stock.notes || ''}', ${stock.is_active})">
@@ -746,7 +781,7 @@
                 }
             } catch (error) {
                 console.error('Error loading stock list:', error);
-                container.innerHTML = '<div class="error">Error loading stock list</div>';
+                container.innerHTML = '<div class="error">Error loading stock list with prices</div>';
             }
         }
         

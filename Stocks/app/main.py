@@ -322,55 +322,65 @@ async def stock_price_check_task():
     try:
         logger.info("Executing scheduled stock price check")
         
-        # In a real implementation, you would:
-        # 1. Get list of tracked stocks from database
-        # 2. Fetch current prices for all stocks
-        # 3. Compare with previous prices
-        # 4. Generate alerts for significant changes
-        # 5. Send SMS alerts with AI analysis
-        
-        # Get dynamic list of tracked stocks from the stock list service
+        # STEP 1: Import all the services we need
+        # We import inside the function to prevent issues when the app starts up
         from .services.stock_list_service import StockListService
         from .services.alert_preferences_service import AlertPreferencesService
         from .services.stock_service import StockService
         from .services.email_service import EmailService
         from .services.agent_service import AgentService
         
+        # STEP 2: Create instances of all our services
+        # Each service handles a specific part of the system:
+        # - stock_list_service: Manages the list of tracked stocks (stored in JSON file)
+        # - preferences_service: Handles alert settings and thresholds for each stock
+        # - stock_service: Fetches real-time stock data from Yahoo Finance API
+        # - email_service: Sends email alerts to users when stocks hit thresholds
+        # - agent_service: Uses AI to analyze stock movements and provide insights
         stock_list_service = StockListService()
         preferences_service = AlertPreferencesService()
         stock_service = StockService()
         email_service = EmailService()
         agent_service = AgentService()
         
+        # STEP 3: Get the list of all stocks we're currently tracking
+        # This comes from our JSON database file where users add/remove stocks
         tracked_stocks = stock_list_service.get_active_stocks()
         
+        # If no stocks are being tracked, we don't need to do anything
         if not tracked_stocks:
             logger.warning("No active stocks found in tracking list")
             return
         
-        # Get alert preferences
+        # STEP 4: Check if email alerts are enabled
+        # Users can disable alerts if they don't want to receive emails
         preferences = preferences_service.get_preferences()
         if not preferences or not preferences.email_alerts_enabled:
             logger.warning("Email alerts not enabled, skipping price checks")
             return
         
+        # STEP 5: Process each tracked stock one by one
+        # This is the main loop that does all the work
         for symbol in tracked_stocks:
             try:
-                # Get current quote
+                # STEP 6: Fetch current stock data from Yahoo Finance
+                # This gets us the current price, previous close, volume, etc.
                 quote = await stock_service.get_stock_quote(symbol)
                 if not quote:
                     logger.warning(f"No quote data available for {symbol}")
-                    continue
+                    continue  # Skip this stock if we can't get data
                 
-                # Update the stock price in the database
+                # STEP 7: Extract the current price from the quote data
+                # We convert to float to make sure it's a number, not a string
                 current_price = float(quote.price)
-                stock_list_service.update_stock_price(symbol, current_price)
                 
-                # Check if alert should be triggered using simple threshold comparison
+                # STEP 8: Get the alert threshold for this specific stock
+                # Each stock can have its own threshold (e.g., AAPL at 1%, TSLA at 2%)
                 threshold = preferences_service.get_effective_threshold(symbol)
-                previous_close = float(quote.previous_close)
+                previous_close = float(quote.previous_close)  # Yesterday's closing price
                 
-                # Calculate percentage change from previous close
+                # STEP 9: Calculate how much the price has changed
+                # We use absolute value so both up and down movements trigger alerts
                 price_change_percent = abs((current_price - previous_close) / previous_close * 100)
                 
                 if price_change_percent >= threshold:
@@ -406,9 +416,8 @@ async def stock_price_check_task():
                         threshold_used=threshold
                     )
                     
-                    # Update the last alert time in the database
-                    from datetime import datetime
-                    stock_list_service.update_stock_price(symbol, current_price, datetime.utcnow())
+                    # Note: Alert sent successfully - no need to store in database
+                    # The web interface will fetch current prices on-demand
                     
             except Exception as e:
                 logger.error(f"Error processing stock {symbol}: {str(e)}")

@@ -123,8 +123,8 @@ class StockListService:
                 
                 days_tracked = (datetime.utcnow() - added_date).days
                 
-                # Get current price from the stock model
-                current_price = stock.current_price
+                # Note: Current price is now fetched on-demand in the web interface
+                # This avoids persistence issues and ensures fresh data
                 
                 # Create response object
                 response_stock = StockListResponse(
@@ -136,8 +136,7 @@ class StockListService:
                     alert_threshold=stock.alert_threshold,
                     notes=stock.notes,
                     days_tracked=days_tracked,
-                    current_price=current_price,
-                    last_alert=stock.last_alert.isoformat() if isinstance(stock.last_alert, datetime) else stock.last_alert
+                    # Note: current_price and last_alert are now fetched on-demand
                 )
                 
                 response_stocks.append(response_stock)
@@ -188,15 +187,7 @@ class StockListService:
             # Calculate days tracked
             days_tracked = (datetime.utcnow() - stock.added_date).days
             
-            # Get current price (optional)
-            current_price = None
-            try:
-                # Note: get_stock_info is async, but we're in a sync method
-                # For now, we'll skip current price fetching in this method
-                # TODO: Make this method async or use a different approach
-                pass
-            except Exception as e:
-                logger.debug(f"Could not get current price for {stock.symbol}: {str(e)}")
+            # Note: Current price is now fetched on-demand in the web interface
             
             response_stock = StockListResponse(
                 id=stock.id,
@@ -295,8 +286,7 @@ class StockListService:
                 alert_type=new_stock.alert_type,
                 notes=new_stock.notes,
                 days_tracked=0,
-                current_price=None,  # TODO: Get current price
-                last_alert=None
+                # Note: current_price and last_alert are now fetched on-demand
             )
             
         except Exception as e:
@@ -348,8 +338,7 @@ class StockListService:
                 alert_threshold=stock.alert_threshold,
                 notes=stock.notes,
                 days_tracked=days_tracked,
-                current_price=None,  # TODO: Get current price
-                last_alert=None
+                # Note: current_price and last_alert are now fetched on-demand
             )
             
         except Exception as e:
@@ -386,43 +375,8 @@ class StockListService:
             logger.error(f"Error removing stock {stock_id}: {str(e)}")
             return False
     
-    def update_stock_price(self, symbol: str, current_price: float, last_alert: Optional[datetime] = None) -> bool:
-        """
-        Update the current price and last alert time for a stock.
-        
-        Args:
-            symbol: Stock symbol to update
-            current_price: Current stock price
-            last_alert: When the last alert was sent (optional)
-            
-        Returns:
-            True if updated successfully, False otherwise
-        """
-        try:
-            # Find the stock by symbol
-            stock = None
-            for s in self.tracked_stocks:
-                if s.symbol.upper() == symbol.upper():
-                    stock = s
-                    break
-            
-            if not stock:
-                logger.warning(f"Stock {symbol} not found for price update")
-                return False
-            
-            # Update the price and alert time
-            stock.current_price = current_price
-            if last_alert:
-                stock.last_alert = last_alert
-            
-            # Save the updated data
-            self._save_stocks()
-            logger.info(f"Updated price for {symbol}: ${current_price}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error updating stock price for {symbol}: {str(e)}")
-            return False
+    # Note: update_stock_price method removed - prices are now fetched on-demand
+    # This eliminates persistence issues and ensures fresh data in the web interface
     
     def get_stock_list_summary(self) -> StockListSummary:
         """

@@ -45,19 +45,8 @@ class TrackedStock(BaseModel):
     # Additional metadata
     notes: Optional[str] = Field(None, description="User notes about this stock")
     
-    # Price tracking fields
-    current_price: Optional[float] = Field(None, description="Current stock price (if available)")
-    last_alert: Optional[Union[datetime, str]] = Field(None, description="When the last alert was sent for this stock")
-    
-    @validator('last_alert', pre=True)
-    def parse_last_alert(cls, v):
-        """Parse last_alert from string or datetime."""
-        if isinstance(v, str):
-            try:
-                return datetime.fromisoformat(v.replace('Z', '+00:00'))
-            except ValueError:
-                return None
-        return v
+    # Note: Price tracking is now handled on-demand in the web interface
+    # This keeps the model simple and avoids persistence issues
     
     class Config:
         """Pydantic configuration for the model."""
@@ -95,18 +84,9 @@ class StockListResponse(BaseModel):
     
     # Computed fields for better user experience
     days_tracked: int = Field(..., description="Number of days this stock has been tracked")
-    current_price: Optional[float] = Field(None, description="Current stock price (if available)")
-    last_alert: Optional[Union[datetime, str]] = Field(None, description="When the last alert was sent for this stock")
     
-    @validator('last_alert', pre=True)
-    def parse_last_alert(cls, v):
-        """Parse last_alert from string or datetime."""
-        if isinstance(v, str):
-            try:
-                return datetime.fromisoformat(v.replace('Z', '+00:00'))
-            except ValueError:
-                return None
-        return v
+    # Note: current_price and last_alert are now fetched on-demand in the web interface
+    # This avoids persistence issues and ensures fresh data
     
     class Config:
         """Pydantic configuration for the response model."""
