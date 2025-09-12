@@ -214,6 +214,20 @@ class SchedulerService:
                     eastern_time = scheduled_time.astimezone(eastern_tz)
                     pacific_time = scheduled_time.astimezone(pacific_tz)
                     logger.info(f"  {time['hour']:02d}:{time['minute']:02d} UTC = {eastern_time.strftime('%I:%M %p %Z')} = {pacific_time.strftime('%I:%M %p %Z')}")
+                
+                # Actually create the cron jobs for market hours
+                for i, time in enumerate(utc_times):
+                    job_id = f'stock_price_check_{i+1}'
+                    job_name = f'Stock Price Check ({time["hour"]:02d}:{time["minute"]:02d} UTC)'
+                    
+                    self.scheduler.add_job(
+                        func=self._execute_stock_check,
+                        trigger=CronTrigger(hour=time['hour'], minute=time['minute']),
+                        id=job_id,
+                        name=job_name,
+                        replace_existing=True
+                    )
+                    logger.info(f"Scheduled market hours job: {job_id} at {time['hour']:02d}:{time['minute']:02d} UTC")
             else:
                 # Fallback to interval-based scheduling
                 check_interval = SchedulerConfig.get_check_interval()
