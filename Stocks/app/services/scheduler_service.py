@@ -222,12 +222,12 @@ class SchedulerService:
                     
                     self.scheduler.add_job(
                         func=self._execute_stock_check,
-                        trigger=CronTrigger(hour=time['hour'], minute=time['minute']),
+                        trigger=CronTrigger(hour=time['hour'], minute=time['minute'], day_of_week='mon-fri'),
                         id=job_id,
                         name=job_name,
                         replace_existing=True
                     )
-                    logger.info(f"Scheduled market hours job: {job_id} at {time['hour']:02d}:{time['minute']:02d} UTC")
+                    logger.info(f"Scheduled market hours job: {job_id} at {time['hour']:02d}:{time['minute']:02d} UTC Monday through Friday")
             else:
                 # Fallback to interval-based scheduling
                 check_interval = SchedulerConfig.get_check_interval()
@@ -252,7 +252,7 @@ class SchedulerService:
             # Schedule system health check (every 30 minutes)
             self.scheduler.add_job(
                 func=self._execute_health_check,
-                trigger=IntervalTrigger(minutes=30),
+                trigger=IntervalTrigger(minutes=180),
                 id='health_check',
                 name='System Health Check',
                 replace_existing=True

@@ -51,7 +51,8 @@ class Settings(BaseSettings):
     # LLM Model configuration
     llm_model: str = Field(
         default="gpt-4o",  # Default to GPT-4o for better compatibility
-        env="LLM_MODEL",  # Look for this environment variable
+        env=
+        "LLM_MODEL",  # Look for this environment variable
         description="OpenAI model to use for analysis (e.g., gpt-4o, gpt-5, gpt-3.5-turbo)"
     )
     

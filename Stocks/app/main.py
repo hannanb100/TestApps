@@ -381,9 +381,9 @@ async def stock_price_check_task():
                 
                 # STEP 9: Calculate how much the price has changed
                 # We use absolute value so both up and down movements trigger alerts
-                price_change_percent = abs((current_price - previous_close) / previous_close * 100)
+                price_change_percent = ((current_price - previous_close) / previous_close * 100)
                 
-                if price_change_percent >= threshold:
+                if abs(price_change_percent) >= threshold:
                     # Check if alert should be sent based on preferences
                     if not preferences_service.should_send_alert(symbol):
                         logger.info(f"Alert triggered for {symbol}: {price_change_percent:+.2f}% but alerts disabled")
