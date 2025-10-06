@@ -1,0 +1,20 @@
+# AWS App Runner Configuration
+# This file tells App Runner how to run your application
+# Think of it as instructions for AWS on how to start your app
+
+version: 1.0
+runtime: docker
+build:
+  commands:
+    build:
+      - echo "Building AI Stock Tracking Agent..."
+      - docker build -t stock-tracker .
+run:
+  runtime-version: latest
+  command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+  network:
+    port: 8000
+    env: PORT
+  env:
+    - name: PORT
+      value: "8000"

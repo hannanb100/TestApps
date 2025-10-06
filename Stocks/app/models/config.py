@@ -184,7 +184,7 @@ class Settings(BaseSettings):
         
         This tells Pydantic how to behave when loading settings.
         """
-        env_file = "/Users/benhannan/Cursor Apps/APPS/.env"  # Where to find the .env file
+        env_file = ".env"  # Use relative path for better portability
         env_file_encoding = "utf-8"  # How to read the file (UTF-8 supports all characters)
         case_sensitive = False  # Don't care about uppercase/lowercase in variable names
         extra = "ignore"  # If there are extra variables in .env, just ignore them
