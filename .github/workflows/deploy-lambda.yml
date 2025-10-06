@@ -1,0 +1,321 @@
+name: Deploy to AWS Lambda
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'Stocks/**' ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  LAMBDA_FUNCTION_NAME: ai-stock-tracker
+  LAMBDA_ROLE_NAME: ai-stock-tracker-role
+
+jobs:
+  deploy:
+    name: Deploy to AWS Lambda
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        cd Stocks
+        pip install -r requirements.txt
+        pip install boto3 awscli
+        
+    - name: Create deployment package
+      run: |
+        cd Stocks
+        
+        # Create deployment package
+        mkdir -p package
+        
+        # Copy application code
+        cp -r app package/
+        cp lambda_handler.py package/
+        cp requirements.txt package/
+        
+        # Install dependencies into package directory
+        pip install -r requirements.txt -t package/
+        
+        # Create zip file
+        cd package
+        zip -r ../deployment.zip .
+        
+        # Show package size
+        ls -lh ../deployment.zip
+        
+    - name: Create IAM role for Lambda
+      run: |
+        # Create trust policy for Lambda
+        cat > trust-policy.json << EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+        EOF
+        
+        # Create execution policy
+        cat > execution-policy.json << EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "arn:aws:logs:*:*:*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+        EOF
+        
+        # Create role if it doesn't exist
+        ROLE_ARN=$(aws iam get-role --role-name $LAMBDA_ROLE_NAME --query 'Role.Arn' --output text 2>/dev/null || echo "")
+        
+        if [ -z "$ROLE_ARN" ]; then
+          echo "Creating IAM role for Lambda..."
+          aws iam create-role \
+            --role-name $LAMBDA_ROLE_NAME \
+            --assume-role-policy-document file://trust-policy.json
+          
+          aws iam put-role-policy \
+            --role-name $LAMBDA_ROLE_NAME \
+            --policy-name LambdaExecutionPolicy \
+            --policy-document file://execution-policy.json
+          
+          ROLE_ARN=$(aws iam get-role --role-name $LAMBDA_ROLE_NAME --query 'Role.Arn' --output text)
+          echo "Created role: $ROLE_ARN"
+        else
+          echo "Using existing role: $ROLE_ARN"
+        fi
+        
+        # Wait for role to be ready
+        echo "Waiting for IAM role to be ready..."
+        aws iam wait role-exists --role-name $LAMBDA_ROLE_NAME
+        
+    - name: Deploy Lambda function
+      run: |
+        cd Stocks
+        
+        # Check if function exists
+        FUNCTION_EXISTS=$(aws lambda get-function --function-name $LAMBDA_FUNCTION_NAME --query 'Configuration.FunctionName' --output text 2>/dev/null || echo "")
+        
+        if [ -z "$FUNCTION_EXISTS" ]; then
+          echo "Creating new Lambda function..."
+          aws lambda create-function \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --runtime python3.11 \
+            --role $ROLE_ARN \
+            --handler lambda_handler.lambda_handler \
+            --zip-file fileb://deployment.zip \
+            --timeout 300 \
+            --memory-size 512 \
+            --environment Variables='{
+              "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
+              "MAILGUN_API_KEY": "${{ secrets.MAILGUN_API_KEY }}",
+              "MAILGUN_DOMAIN": "${{ secrets.MAILGUN_DOMAIN }}",
+              "NEWS_API_KEY": "${{ secrets.NEWS_API_KEY }}",
+              "ALERT_THRESHOLD_PERCENT": "1.0",
+              "CHECK_INTERVAL_MINUTES": "240",
+              "DATABASE_URL": "sqlite:///./stocks.db",
+              "APP_NAME": "AI Stock Tracker",
+              "DEBUG": "false",
+              "LOG_LEVEL": "INFO"
+            }'
+        else
+          echo "Updating existing Lambda function..."
+          aws lambda update-function-code \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --zip-file fileb://deployment.zip
+          
+          aws lambda update-function-configuration \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --timeout 300 \
+            --memory-size 512 \
+            --environment Variables='{
+              "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
+              "MAILGUN_API_KEY": "${{ secrets.MAILGUN_API_KEY }}",
+              "MAILGUN_DOMAIN": "${{ secrets.MAILGUN_DOMAIN }}",
+              "NEWS_API_KEY": "${{ secrets.NEWS_API_KEY }}",
+              "ALERT_THRESHOLD_PERCENT": "1.0",
+              "CHECK_INTERVAL_MINUTES": "240",
+              "DATABASE_URL": "sqlite:///./stocks.db",
+              "APP_NAME": "AI Stock Tracker",
+              "DEBUG": "false",
+              "LOG_LEVEL": "INFO"
+            }'
+        fi
+        
+    - name: Create EventBridge rules
+      run: |
+        # Get Lambda function ARN
+        LAMBDA_ARN=$(aws lambda get-function --function-name $LAMBDA_FUNCTION_NAME --query 'Configuration.FunctionArn' --output text)
+        echo "Lambda ARN: $LAMBDA_ARN"
+        
+        # Update EventBridge rules with actual Lambda ARN
+        sed "s/YOUR_LAMBDA_FUNCTION_ARN/$LAMBDA_ARN/g" Stocks/eventbridge_rules.json > eventbridge_rules_updated.json
+        
+        # Create EventBridge rules
+        aws events put-rule \
+          --name "stock-check-935am" \
+          --description "Stock price check at 9:35 AM Eastern (early market)" \
+          --schedule-expression "cron(35 13 ? * MON-FRI *)" \
+          --state ENABLED
+        
+        aws events put-rule \
+          --name "stock-check-1030am" \
+          --description "Stock price check at 10:30 AM Eastern (mid-morning)" \
+          --schedule-expression "cron(30 14 ? * MON-FRI *)" \
+          --state ENABLED
+        
+        aws events put-rule \
+          --name "stock-check-12pm" \
+          --description "Stock price check at 12:00 PM Eastern (lunchtime)" \
+          --schedule-expression "cron(0 16 ? * MON-FRI *)" \
+          --state ENABLED
+        
+        aws events put-rule \
+          --name "stock-check-2pm" \
+          --description "Stock price check at 2:00 PM Eastern (afternoon)" \
+          --schedule-expression "cron(0 18 ? * MON-FRI *)" \
+          --state ENABLED
+        
+        aws events put-rule \
+          --name "stock-check-355pm" \
+          --description "Stock price check at 3:55 PM Eastern (pre-close)" \
+          --schedule-expression "cron(55 19 ? * MON-FRI *)" \
+          --state ENABLED
+        
+        aws events put-rule \
+          --name "cache-cleanup-2am" \
+          --description "Cache cleanup daily at 2:00 AM UTC" \
+          --schedule-expression "cron(0 2 * * ? *)" \
+          --state ENABLED
+        
+        # Add Lambda permissions for EventBridge
+        aws lambda add-permission \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --statement-id "allow-eventbridge-935am" \
+          --action "lambda:InvokeFunction" \
+          --principal events.amazonaws.com \
+          --source-arn "arn:aws:events:$AWS_REGION:$(aws sts get-caller-identity --query Account --output text):rule/stock-check-935am"
+        
+        aws lambda add-permission \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --statement-id "allow-eventbridge-1030am" \
+          --action "lambda:InvokeFunction" \
+          --principal events.amazonaws.com \
+          --source-arn "arn:aws:events:$AWS_REGION:$(aws sts get-caller-identity --query Account --output text):rule/stock-check-1030am"
+        
+        aws lambda add-permission \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --statement-id "allow-eventbridge-12pm" \
+          --action "lambda:InvokeFunction" \
+          --principal events.amazonaws.com \
+          --source-arn "arn:aws:events:$AWS_REGION:$(aws sts get-caller-identity --query Account --output text):rule/stock-check-12pm"
+        
+        aws lambda add-permission \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --statement-id "allow-eventbridge-2pm" \
+          --action "lambda:InvokeFunction" \
+          --principal events.amazonaws.com \
+          --source-arn "arn:aws:events:$AWS_REGION:$(aws sts get-caller-identity --query Account --output text):rule/stock-check-2pm"
+        
+        aws lambda add-permission \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --statement-id "allow-eventbridge-355pm" \
+          --action "lambda:InvokeFunction" \
+          --principal events.amazonaws.com \
+          --source-arn "arn:aws:events:$AWS_REGION:$(aws sts get-caller-identity --query Account --output text):rule/stock-check-355pm"
+        
+        aws lambda add-permission \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --statement-id "allow-eventbridge-cleanup" \
+          --action "lambda:InvokeFunction" \
+          --principal events.amazonaws.com \
+          --source-arn "arn:aws:events:$AWS_REGION:$(aws sts get-caller-identity --query Account --output text):rule/cache-cleanup-2am"
+        
+        # Add targets to rules
+        aws events put-targets \
+          --rule "stock-check-935am" \
+          --targets "Id=1,Arn=$LAMBDA_ARN,Input={\"schedule\": \"935am\", \"description\": \"Early market check\"}"
+        
+        aws events put-targets \
+          --rule "stock-check-1030am" \
+          --targets "Id=1,Arn=$LAMBDA_ARN,Input={\"schedule\": \"1030am\", \"description\": \"Mid-morning check\"}"
+        
+        aws events put-targets \
+          --rule "stock-check-12pm" \
+          --targets "Id=1,Arn=$LAMBDA_ARN,Input={\"schedule\": \"12pm\", \"description\": \"Lunchtime check\"}"
+        
+        aws events put-targets \
+          --rule "stock-check-2pm" \
+          --targets "Id=1,Arn=$LAMBDA_ARN,Input={\"schedule\": \"2pm\", \"description\": \"Afternoon check\"}"
+        
+        aws events put-targets \
+          --rule "stock-check-355pm" \
+          --targets "Id=1,Arn=$LAMBDA_ARN,Input={\"schedule\": \"355pm\", \"description\": \"Pre-close check\"}"
+        
+        aws events put-targets \
+          --rule "cache-cleanup-2am" \
+          --targets "Id=1,Arn=$LAMBDA_ARN,Input={\"schedule\": \"cleanup\", \"description\": \"Daily cache cleanup\"}"
+        
+    - name: Test Lambda function
+      run: |
+        # Test the Lambda function
+        echo "Testing Lambda function..."
+        aws lambda invoke \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --payload '{"test": true}' \
+          --log-type Tail \
+          response.json
+        
+        echo "Lambda test response:"
+        cat response.json
+        
+    - name: Deployment Status
+      run: |
+        echo "🚀 Lambda deployment completed!"
+        echo "📊 Function: $LAMBDA_FUNCTION_NAME"
+        echo "⏰ Scheduled checks: 9:35 AM, 10:30 AM, 12:00 PM, 2:00 PM, 3:55 PM Eastern (Mon-Fri)"
+        echo "🧹 Cache cleanup: Daily at 2:00 AM UTC"
+        echo "💰 Estimated cost: ~$0.03/month (essentially free)"
+        echo ""
+        echo "📋 View your function: https://console.aws.amazon.com/lambda/home?region=$AWS_REGION#/functions/$LAMBDA_FUNCTION_NAME"
+        echo "📅 View EventBridge rules: https://console.aws.amazon.com/events/home?region=$AWS_REGION#/rules"
