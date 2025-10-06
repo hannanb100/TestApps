@@ -6,16 +6,16 @@
       "ImageConfiguration": {
         "Port": "8000",
         "RuntimeEnvironmentVariables": {
-          "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
-          "MAILGUN_API_KEY": "${{ secrets.MAILGUN_API_KEY }}",
-          "MAILGUN_DOMAIN": "${{ secrets.MAILGUN_DOMAIN }}",
+          "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+          "MAILGUN_API_KEY": "${MAILGUN_API_KEY}",
+          "MAILGUN_DOMAIN": "${MAILGUN_DOMAIN}",
           "ALERT_THRESHOLD_PERCENT": "1.0",
           "CHECK_INTERVAL_MINUTES": "240",
           "DATABASE_URL": "sqlite:///./stocks.db",
           "APP_NAME": "AI Stock Tracker",
           "DEBUG": "false",
           "LOG_LEVEL": "INFO",
-          "NEWS_API_KEY": "${{ secrets.NEWS_API_KEY }}"
+          "NEWS_API_KEY": "${NEWS_API_KEY}"
         }
       }
     },

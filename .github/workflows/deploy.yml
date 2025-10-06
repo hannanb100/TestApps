@@ -44,11 +44,17 @@ jobs:
         
     - name: Update App Runner service
       run: |
-        # Create config file with actual secrets
-        sed "s/\${{ secrets.OPENAI_API_KEY }}/${{ secrets.OPENAI_API_KEY }}/g" Stocks/aws/apprunner-config.json > config-with-secrets.json
-        sed -i "s/\${{ secrets.MAILGUN_API_KEY }}/${{ secrets.MAILGUN_API_KEY }}/g" config-with-secrets.json
-        sed -i "s/\${{ secrets.MAILGUN_DOMAIN }}/${{ secrets.MAILGUN_DOMAIN }}/g" config-with-secrets.json
-        sed -i "s/\${{ secrets.NEWS_API_KEY }}/${{ secrets.NEWS_API_KEY }}/g" config-with-secrets.json
+        # Create config file with actual secrets using envsubst
+        cp Stocks/aws/apprunner-config.json config-with-secrets.json
+        
+        # Replace secrets using environment variables
+        export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
+        export MAILGUN_API_KEY="${{ secrets.MAILGUN_API_KEY }}"
+        export MAILGUN_DOMAIN="${{ secrets.MAILGUN_DOMAIN }}"
+        export NEWS_API_KEY="${{ secrets.NEWS_API_KEY }}"
+        
+        # Use envsubst to replace variables
+        envsubst < config-with-secrets.json > config-final.json
         
         # Get the service ARN
         SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='$APP_RUNNER_SERVICE'].ServiceArn" --output text)
@@ -57,7 +63,7 @@ jobs:
           echo "Creating new App Runner service..."
           aws apprunner create-service \
             --service-name $APP_RUNNER_SERVICE \
-            --source-configuration file://config-with-secrets.json \
+            --source-configuration file://config-final.json \
             --instance-configuration '{
                 "Cpu": "1 vCPU",
                 "Memory": "2 GB"
