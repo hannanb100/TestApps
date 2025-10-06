@@ -1,0 +1,36 @@
+{
+  "ServiceName": "ai-stock-tracker",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "059948105794.dkr.ecr.us-east-1.amazonaws.com/ai-stock-tracker:latest",
+      "ImageConfiguration": {
+        "Port": "8000",
+        "RuntimeEnvironmentVariables": {
+          "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
+          "MAILGUN_API_KEY": "${{ secrets.MAILGUN_API_KEY }}",
+          "MAILGUN_DOMAIN": "${{ secrets.MAILGUN_DOMAIN }}",
+          "ALERT_THRESHOLD_PERCENT": "1.0",
+          "CHECK_INTERVAL_MINUTES": "240",
+          "DATABASE_URL": "sqlite:///./stocks.db",
+          "APP_NAME": "AI Stock Tracker",
+          "DEBUG": "false",
+          "LOG_LEVEL": "INFO",
+          "NEWS_API_KEY": "${{ secrets.NEWS_API_KEY }}"
+        }
+      }
+    },
+    "AutoDeploymentsEnabled": true
+  },
+  "InstanceConfiguration": {
+    "Cpu": "1 vCPU",
+    "Memory": "2 GB"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/health",
+    "Interval": 20,
+    "Timeout": 5,
+    "HealthyThreshold": 3,
+    "UnhealthyThreshold": 5
+  }
+}
