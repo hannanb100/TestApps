@@ -1,0 +1,134 @@
+name: Deploy to AWS EC2 (Simple)
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'Stocks/**' ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  EC2_INSTANCE_TYPE: t3.micro
+
+jobs:
+  deploy:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Create EC2 instance
+      run: |
+        # Create security group
+        SECURITY_GROUP_ID=$(aws ec2 create-security-group \
+          --group-name ai-stock-tracker-sg \
+          --description "Security group for AI Stock Tracker" \
+          --query 'GroupId' --output text 2>/dev/null || \
+          aws ec2 describe-security-groups \
+          --group-names ai-stock-tracker-sg \
+          --query 'SecurityGroups[0].GroupId' --output text)
+        
+        # Allow HTTP and HTTPS traffic
+        aws ec2 authorize-security-group-ingress \
+          --group-id $SECURITY_GROUP_ID \
+          --protocol tcp \
+          --port 80 \
+          --cidr 0.0.0.0/0 2>/dev/null || echo "Port 80 already authorized"
+        
+        aws ec2 authorize-security-group-ingress \
+          --group-id $SECURITY_GROUP_ID \
+          --protocol tcp \
+          --port 443 \
+          --cidr 0.0.0.0/0 2>/dev/null || echo "Port 443 already authorized"
+        
+        aws ec2 authorize-security-group-ingress \
+          --group-id $SECURITY_GROUP_ID \
+          --protocol tcp \
+          --port 8000 \
+          --cidr 0.0.0.0/0 2>/dev/null || echo "Port 8000 already authorized"
+        
+        # Create user data script
+        cat > user-data.sh << 'EOF'
+        #!/bin/bash
+        yum update -y
+        yum install -y docker git python3 python3-pip
+        
+        # Start Docker
+        systemctl start docker
+        systemctl enable docker
+        usermod -a -G docker ec2-user
+        
+        # Clone repository
+        cd /home/ec2-user
+        git clone https://github.com/hannanb100/TestApps.git
+        cd TestApps/Stocks
+        
+        # Create environment file
+        cat > .env << 'ENVEOF'
+        OPENAI_API_KEY=$OPENAI_API_KEY
+        MAILGUN_API_KEY=$MAILGUN_API_KEY
+        MAILGUN_DOMAIN=$MAILGUN_DOMAIN
+        NEWS_API_KEY=$NEWS_API_KEY
+        ALERT_THRESHOLD_PERCENT=1.0
+        CHECK_INTERVAL_MINUTES=240
+        DATABASE_URL=sqlite:///./stocks.db
+        APP_NAME=AI Stock Tracker
+        DEBUG=false
+        LOG_LEVEL=INFO
+        ENVEOF
+        
+        # Build and run Docker container
+        docker build -t ai-stock-tracker .
+        docker run -d \
+          --name stock-tracker \
+          --restart unless-stopped \
+          -p 8000:8000 \
+          --env-file .env \
+          ai-stock-tracker
+        
+        # Set up auto-start
+        echo "docker start stock-tracker" >> /etc/rc.local
+        chmod +x /etc/rc.local
+        EOF
+        
+        # Launch EC2 instance
+        INSTANCE_ID=$(aws ec2 run-instances \
+          --image-id ami-0c02fb55956c7d316 \
+          --count 1 \
+          --instance-type $EC2_INSTANCE_TYPE \
+          --security-group-ids $SECURITY_GROUP_ID \
+          --user-data file://user-data.sh \
+          --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=ai-stock-tracker}]' \
+          --query 'Instances[0].InstanceId' --output text)
+        
+        echo "Instance created: $INSTANCE_ID"
+        
+        # Wait for instance to be running
+        aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+        
+        # Get public IP
+        PUBLIC_IP=$(aws ec2 describe-instances \
+          --instance-ids $INSTANCE_ID \
+          --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+        
+        echo "instance-id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+        echo "public-ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+        
+    - name: Deployment Status
+      run: |
+        echo "🚀 EC2 deployment completed!"
+        echo "🌐 Your app is available at: http://${{ steps.deploy.outputs.public-ip }}:8000"
+        echo "💰 Cost: ~$3-5/month for t3.micro instance"
+        echo "🎯 Ad-hoc trigger: http://${{ steps.deploy.outputs.public-ip }}:8000/api/v1/scheduler/check-now"
+        echo "📊 Dashboard: http://${{ steps.deploy.outputs.public-ip }}:8000/dashboard"
+        echo ""
+        echo "📋 View your instance: https://console.aws.amazon.com/ec2/home?region=$AWS_REGION#Instances:instanceId=${{ steps.deploy.outputs.instance-id }}"
