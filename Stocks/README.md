@@ -2,6 +2,9 @@
 
 An intelligent stock tracking system that monitors stock prices and sends SMS alerts with AI-powered analysis. Built with FastAPI, LangChain, and Twilio.
 
+## AWS Deployment
+Deployed to AWS Elastic Beanstalk with automatic cleanup of failed environments.
+
 ## 🚀 Features
 
 - **📱 SMS Interface**: Interact with the system using natural language SMS commands
