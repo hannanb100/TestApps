@@ -121,20 +121,26 @@ jobs:
     - name: Install EB CLI
       run: |
         pip install awsebcli
-        
-    - name: Deploy to Elastic Beanstalk
+
+    - name: Clean up failed environment and deploy
       run: |
         cd Stocks
-        
+
         # Initialize EB application
         eb init $APPLICATION_NAME --region $AWS_REGION --platform python-3.11
-        
-        # Create environment if it doesn't exist
-        eb create $ENVIRONMENT_NAME --region $AWS_REGION || echo "Environment already exists"
-        
+
+        # Terminate failed environment if it exists
+        eb terminate $ENVIRONMENT_NAME --force || echo "Environment doesn't exist or already terminated"
+
+        # Wait a moment for cleanup
+        sleep 30
+
+        # Create new environment
+        eb create $ENVIRONMENT_NAME --region $AWS_REGION
+
         # Set the default environment
         eb use $ENVIRONMENT_NAME
-        
+
         # Set environment variables
         eb setenv \
           OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
@@ -147,7 +153,7 @@ jobs:
           APP_NAME="AI Stock Tracker" \
           DEBUG="false" \
           LOG_LEVEL="INFO"
-        
+
         # Deploy
         eb deploy
         
