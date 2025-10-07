@@ -1,0 +1,166 @@
+name: Deploy to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'Stocks/**' ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  APPLICATION_NAME: ai-stock-tracker
+  ENVIRONMENT_NAME: ai-stock-tracker-env
+
+jobs:
+  deploy:
+    name: Deploy to AWS Elastic Beanstalk
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Create deployment package
+      run: |
+        cd Stocks
+        
+        # Create deployment package for Elastic Beanstalk
+        mkdir -p deployment
+        
+        # Copy application files
+        cp -r app deployment/
+        cp requirements.txt deployment/
+        cp Procfile deployment/
+        
+        # Create application.py for Elastic Beanstalk
+        cat > deployment/application.py << 'EOF'
+        from app.main import app
+        
+        # This is the entry point for Elastic Beanstalk
+        application = app
+        
+        if __name__ == "__main__":
+            import uvicorn
+            uvicorn.run(application, host="0.0.0.0", port=8000)
+        EOF
+        
+        # Create .ebextensions directory for configuration
+        mkdir -p deployment/.ebextensions
+        
+        # Create environment configuration
+        cat > deployment/.ebextensions/01_environment.config << 'EOF'
+        option_settings:
+          aws:elasticbeanstalk:application:environment:
+            PYTHONPATH: "/var/app/current:$PYTHONPATH"
+            OPENAI_API_KEY: "$OPENAI_API_KEY"
+            MAILGUN_API_KEY: "$MAILGUN_API_KEY"
+            MAILGUN_DOMAIN: "$MAILGUN_DOMAIN"
+            NEWS_API_KEY: "$NEWS_API_KEY"
+            ALERT_THRESHOLD_PERCENT: "1.0"
+            CHECK_INTERVAL_MINUTES: "240"
+            DATABASE_URL: "sqlite:///./stocks.db"
+            APP_NAME: "AI Stock Tracker"
+            DEBUG: "false"
+            LOG_LEVEL: "INFO"
+          aws:elasticbeanstalk:container:python:
+            WSGIPath: "application.py"
+          aws:elasticbeanstalk:environment:process:default:
+            HealthCheckPath: "/health"
+            Port: "8000"
+          aws:autoscaling:launchconfiguration:
+            InstanceType: "t3.micro"
+          aws:autoscaling:asg:
+            MinSize: 1
+            MaxSize: 1
+          aws:elasticbeanstalk:healthreporting:system:
+            SystemType: "enhanced"
+        EOF
+        
+        # Create requirements.txt for Elastic Beanstalk
+        cat > deployment/requirements.txt << 'EOF'
+        fastapi>=0.104.1
+        uvicorn[standard]>=0.24.0
+        gunicorn>=21.2.0
+        httpx>=0.25.0
+        aiohttp>=3.9.0
+        requests>=2.31.0
+        pydantic>=2.5.0
+        pydantic-settings>=2.1.0
+        yfinance>=0.2.18
+        twilio>=8.10.0
+        langchain>=0.1.0
+        langchain-community>=0.0.10
+        langchain-core>=0.1.0
+        openai>=1.3.0
+        apscheduler>=3.10.4
+        pytz>=2023.3
+        sqlalchemy>=2.0.23
+        python-dotenv>=1.0.0
+        structlog>=23.2.0
+        EOF
+        
+        # Create zip file
+        cd deployment
+        zip -r ../deployment.zip .
+        
+        # Show package size
+        ls -lh ../deployment.zip
+        
+    - name: Install EB CLI
+      run: |
+        pip install awsebcli
+        
+    - name: Deploy to Elastic Beanstalk
+      run: |
+        cd Stocks
+        
+        # Initialize EB application
+        eb init $APPLICATION_NAME --region $AWS_REGION --platform python-3.11
+        
+        # Set environment variables
+        eb setenv \
+          OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+          MAILGUN_API_KEY="${{ secrets.MAILGUN_API_KEY }}" \
+          MAILGUN_DOMAIN="${{ secrets.MAILGUN_DOMAIN }}" \
+          NEWS_API_KEY="${{ secrets.NEWS_API_KEY }}" \
+          ALERT_THRESHOLD_PERCENT="1.0" \
+          CHECK_INTERVAL_MINUTES="240" \
+          DATABASE_URL="sqlite:///./stocks.db" \
+          APP_NAME="AI Stock Tracker" \
+          DEBUG="false" \
+          LOG_LEVEL="INFO"
+        
+        # Create environment if it doesn't exist
+        eb create $ENVIRONMENT_NAME --region $AWS_REGION || echo "Environment already exists"
+        
+        # Deploy
+        eb deploy $ENVIRONMENT_NAME
+        
+    - name: Get application URL
+      id: get-url
+      run: |
+        cd Stocks
+        URL=$(eb status $ENVIRONMENT_NAME --region $AWS_REGION | grep "CNAME" | awk '{print $2}')
+        echo "application-url=https://$URL" >> $GITHUB_OUTPUT
+        
+    - name: Deployment Status
+      run: |
+        echo "🚀 Elastic Beanstalk deployment completed!"
+        echo "🌐 Your app is available at: ${{ steps.get-url.outputs.application-url }}"
+        echo "💰 Cost: ~$3-5/month for full web interface and API"
+        echo "🎯 Ad-hoc trigger: ${{ steps.get-url.outputs.application-url }}/api/v1/scheduler/check-now"
+        echo "📊 Dashboard: ${{ steps.get-url.outputs.application-url }}/dashboard"
+        echo ""
+        echo "📋 View your app: https://console.aws.amazon.com/elasticbeanstalk/home?region=$AWS_REGION#/application/overview?applicationName=$APPLICATION_NAME"
