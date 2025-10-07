@@ -129,6 +129,12 @@ jobs:
         # Initialize EB application
         eb init $APPLICATION_NAME --region $AWS_REGION --platform python-3.11
         
+        # Create environment if it doesn't exist
+        eb create $ENVIRONMENT_NAME --region $AWS_REGION || echo "Environment already exists"
+        
+        # Set the default environment
+        eb use $ENVIRONMENT_NAME
+        
         # Set environment variables
         eb setenv \
           OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
@@ -142,11 +148,8 @@ jobs:
           DEBUG="false" \
           LOG_LEVEL="INFO"
         
-        # Create environment if it doesn't exist
-        eb create $ENVIRONMENT_NAME --region $AWS_REGION || echo "Environment already exists"
-        
         # Deploy
-        eb deploy $ENVIRONMENT_NAME
+        eb deploy
         
     - name: Get application URL
       id: get-url
